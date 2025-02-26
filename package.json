@@ -1,0 +1,39 @@
+{
+  "name": "my-typescript-starter",
+  "version": "1.0.0",
+  "description": "Typescript starter for my projects",
+  "scripts": {
+    "start:dev": "tsc --watch",
+    "test:dev": "vitest",
+    "test": "vitest run",
+    "lint": "eslint --fix",
+    "format": "prettier --write .",
+    "prepare": "husky",
+    "pre-commit": "lint-staged",
+    "build": "tsc"
+  },
+  "lint-staged": {
+    "**/*.{js,mjs,cjs,ts}": [
+      "eslint --fix",
+      "prettier --write",
+      "git add -p"
+    ],
+    "**/*.{ts,tsx}": "tsc-files --noEmit"
+  },
+  "keywords": [],
+  "author": "Andrii Artemenko",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "eslint": "^9.19.0",
+    "globals": "^15.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.4.2",
+    "tsc-files": "^1.1.4",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.22.0",
+    "vitest": "^3.0.4"
+  }
+}
