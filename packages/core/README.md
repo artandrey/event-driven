@@ -141,8 +141,6 @@ The event-driven module provides several key definitions:
 
 **Event Publisher (IEventPublisher)** - Interface for publishing events to external systems. Publishers are responsible for sending events to external message brokers or other systems.
 
-**Event Subscriber (IEventSubscriber)** - Interface for subscribing to events. Used for in-app synchronous events, similar to an event emitter.
-
 **Handler Register (IHandlerRegister)** - Interface for the handler register service. Responsible for registering handlers and retrieving handler signatures.
 
 ## Scoped Handlers with Context
