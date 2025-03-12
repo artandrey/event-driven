@@ -15,8 +15,7 @@
     "prepare": "husky",
     "pre-commit": "lint-staged && tsc-files --noEmit",
     "build": "tsup",
-    "release": "changeset publish",
-    "ci:publish": "changeset publish",
+    "ci:publish": "pnpm publish -r --access=public",
     "test:e2e": "vitest --config ./vitest.config.e2e.mts"
   },
   "lint-staged": {

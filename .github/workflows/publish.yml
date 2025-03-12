@@ -6,7 +6,8 @@ on:
       - 'main'
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
-
+env:
+  CI: true
 jobs:
   test:
     uses: ./.github/workflows/test.yml
@@ -30,7 +31,7 @@ jobs:
         with:
           commit: "chore: update versions"
           title: "chore: update versions"
-          publish: npm publish
+          publish: pnpm ci:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
