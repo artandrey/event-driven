@@ -16,7 +16,7 @@
     "pre-commit": "lint-staged && tsc-files --noEmit",
     "build": "tsup",
     "release": "changeset publish",
-    "ci:publish": "npm publish --access=public",
+    "ci:publish": "changeset publish",
     "test:e2e": "vitest --config ./vitest.config.e2e.mts"
   },
   "lint-staged": {
