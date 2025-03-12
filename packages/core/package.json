@@ -13,6 +13,10 @@
     "type": "git",
     "url": "git+https://github.com/artandrey/event-driven.git"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "bugs": {
     "url": "https://github.com/artandrey/event-driven/issues"
   },
