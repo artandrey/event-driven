@@ -3,9 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "description": "A modular, framework-agnostic package for building event-driven architectures in TypeScript server side applications.",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
   "scripts": {
     "start:dev": "tsc --watch",
     "test:dev": "vitest",
