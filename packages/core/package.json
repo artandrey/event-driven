@@ -1,0 +1,22 @@
+{
+  "name": "@event-driven/core",
+  "version": "0.0.0",
+  "description": "Core package for event-driven architectures in TypeScript server side applications.",
+  "private": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "author": "Andrii Artemenko",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artandrey/event-driven.git"
+  },
+  "bugs": {
+    "url": "https://github.com/artandrey/event-driven/issues"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts"
+}

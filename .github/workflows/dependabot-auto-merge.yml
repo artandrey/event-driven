@@ -11,7 +11,7 @@ jobs:
     if: ${{ github.actor == 'dependabot[bot]' }}
     strategy:
       matrix:
-        check: ['Build check', 'Linting and formatting check', 'Test check']
+        check: ['lint / Linting and formatting check', 'test / Test check', 'Build check']
     steps:
       - name: Wait for ${{ matrix.check }}
         uses: lewagon/wait-on-check-action@v1.3.1
@@ -19,7 +19,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           check-name: ${{ matrix.check }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
+          wait-interval: 30
 
   dependabot-merge:
     needs: wait-for-checks

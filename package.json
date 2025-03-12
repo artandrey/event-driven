@@ -1,7 +1,11 @@
 {
-  "name": "my-typescript-starter",
-  "version": "1.0.0",
-  "description": "Typescript starter for my projects",
+  "name": "@event-driven/repository",
+  "private": true,
+  "version": "0.0.0",
+  "description": "A modular, framework-agnostic package for building event-driven architectures in TypeScript server side applications.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
   "scripts": {
     "start:dev": "tsc --watch",
     "test:dev": "vitest",
@@ -10,7 +14,9 @@
     "format": "prettier --write .",
     "prepare": "husky",
     "pre-commit": "lint-staged",
-    "build": "tsc"
+    "build": "tsup",
+    "release": "changeset publish",
+    "test:e2e": "vitest --config ./vitest.config.e2e.mts"
   },
   "lint-staged": {
     "**/*.{js,mjs,cjs,ts}": [
@@ -22,18 +28,34 @@
   },
   "keywords": [],
   "author": "Andrii Artemenko",
-  "license": "ISC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artandrey/event-driven.git"
+  },
+  "bugs": {
+    "url": "https://github.com/artandrey/event-driven/issues"
+  },
   "devDependencies": {
-    "@eslint/js": "^9.21.0",
+    "@changesets/cli": "^2.27.12",
+    "@eslint/js": "^9.19.0",
+    "@nestjs/common": "^11.0.8",
+    "@nestjs/core": "^11.0.8",
+    "@nestjs/testing": "^11.0.8",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-    "eslint": "^9.21.0",
+    "@types/node": "^22.13.1",
+    "eslint": "^9.19.0",
     "globals": "^15.14.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "prettier": "^3.4.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
     "tsc-files": "^1.1.4",
+    "tsup": "^8.4.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.22.0",
-    "vitest": "^3.0.7"
+    "typescript-eslint": "^8.23.0",
+    "unplugin-swc": "^1.5.1",
+    "vitest": "^3.0.5"
   }
 }

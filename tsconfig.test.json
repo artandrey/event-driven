@@ -3,7 +3,8 @@
   "references": [{ "path": "./tsconfig.src.json" }],
   "compilerOptions": {
     "composite": true,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    "baseUrl": "./"
   },
-  "include": ["src/tests/**/*.spec.ts"]
+  "include": ["packages/**/*.spec.ts"]
 }
