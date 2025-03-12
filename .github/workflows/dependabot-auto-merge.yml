@@ -11,7 +11,7 @@ jobs:
     if: ${{ github.actor == 'dependabot[bot]' }}
     strategy:
       matrix:
-        check: ['lint / Linting and formatting check', 'test / Test check', 'Build check']
+        check: ['lint / Linting and formatting check', 'test / Test', 'Build check']
     steps:
       - name: Wait for ${{ matrix.check }}
         uses: lewagon/wait-on-check-action@v1.3.1
