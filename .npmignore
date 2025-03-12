@@ -14,4 +14,4 @@ eslint.config.mjs
 .husky
 .prettierrc
 .changeset
-
+.npmrc
