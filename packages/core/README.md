@@ -1,4 +1,4 @@
-# Event Driven Core
+# Event Driven Architecture / Core
 
 The main purpose of this package is to provide core functionality for building event-driven architectures in TypeScript applications.
 `EventBus` provides methods to make it possible to extend event routing for specific integrations and enable acknowledgement mechanisms for message brokers.
@@ -20,16 +20,16 @@ First, let's install the package using your preferred package manager:
 
 ```bash
 # Using npm
-npm install @event-driven/core
+npm install @event-driven-architecture/core
 
 # Using yarn
-yarn add @event-driven/core
+yarn add @event-driven-architecture/core
 
 # Using pnpm
-pnpm add @event-driven/core
+pnpm add @event-driven-architecture/core
 
 # Using bun
-bun add @event-driven/core
+bun add @event-driven-architecture/core
 ```
 
 ## Event Handlers
@@ -39,7 +39,7 @@ bun add @event-driven/core
 First, define your events by implementing the `IEvent` interface:
 
 ```typescript
-import { IEvent } from '@event-driven/core';
+import { IEvent } from '@event-driven-architecture/core';
 
 interface IUserCreatedEventPayload {
   userId: string;
@@ -55,7 +55,7 @@ export class UserCreatedEvent implements IEvent<IUserCreatedEventPayload> {
 Next, create handlers for your events:
 
 ```typescript
-import { IEventHandler } from '@event-driven/core';
+import { IEventHandler } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
 
@@ -79,7 +79,7 @@ Event handlers need to be registered with a handler register service. The implem
 To publish events, use the `IEventBus`:
 
 ```typescript
-import { IEventBus } from '@event-driven/core';
+import { IEventBus } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
 
@@ -100,7 +100,7 @@ class UserService {
 To use external message brokers, you need to set up a publisher:
 
 ```typescript
-import { IEventBus } from '@event-driven/core';
+import { IEventBus } from '@event-driven-architecture/core';
 
 import { MyCustomPublisher } from './my-custom-publisher';
 
@@ -148,7 +148,7 @@ The event-driven module provides several key definitions:
 You can create scoped handlers that receive context information:
 
 ```typescript
-import { EventHandlerScope, IEventHandler } from '@event-driven/core';
+import { EventHandlerScope, IEventHandler } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
 
