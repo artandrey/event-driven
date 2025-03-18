@@ -148,7 +148,7 @@ The event-driven module provides several key definitions:
 You can create scoped handlers that receive context information:
 
 ```typescript
-import { IEventHandler } from '@event-driven-architecture/core';
+import { EventHandlerScope, IEventHandler } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
 
