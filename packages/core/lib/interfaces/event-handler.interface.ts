@@ -13,10 +13,6 @@ export type EventOption =
       metadata?: unknown;
     };
 
-export interface EventHandlerProviderOptions {
-  scope?: EventHandlerScope;
-}
-
 export interface IEventHandler<TEvent extends IEvent = IEvent, TContext = void> {
   handle(event: TEvent, context: TContext): void;
 }
