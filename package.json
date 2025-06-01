@@ -42,7 +42,7 @@
     "@nestjs/core": "^11.1.0",
     "@nestjs/testing": "^11.1.0",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-    "@types/node": "^22.15.3",
+    "@types/node": "^22.15.29",
     "eslint": "^9.25.1",
     "globals": "^16.0.0",
     "husky": "^9.1.7",
