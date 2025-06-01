@@ -36,7 +36,7 @@
     "packages/core"
   ],
   "devDependencies": {
-    "@changesets/cli": "^2.29.2",
+    "@changesets/cli": "^2.29.4",
     "@eslint/js": "^9.25.1",
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
