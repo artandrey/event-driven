@@ -44,7 +44,12 @@ const QUEUE_NAME = 'user-queue';
 
 export class UserCreatedEvent extends BullMqEvent<{ userId: string }> {
   constructor(payload: { userId: string }) {
-    super(QUEUE_NAME, 'user-created', { attempts: 3 }, payload);
+    super({
+      queueName: QUEUE_NAME,
+      name: 'user-created',
+      jobOptions: { attempts: 3 },
+      payload,
+    });
   }
 }
 ```
@@ -195,13 +200,24 @@ interface FlowEventPayload {
 
 class SubEvent extends BullMqEvent<SubEventPayload> {
   constructor(payload: SubEventPayload) {
-    super(SUB_QUEUE, 'sub-event', { attempts: 3 }, payload);
+    super({
+      queueName: SUB_QUEUE,
+      name: 'sub-event',
+      jobOptions: { attempts: 3 },
+      payload,
+    });
   }
 }
 
 class FlowEvent extends BullMqFlowEvent<FlowEventPayload> {
   constructor(payload: FlowEventPayload) {
-    super(MAIN_QUEUE, 'flow-event', { attempts: 3 }, payload, [new SubEvent({ sub: payload.sub })]);
+    super({
+      queueName: MAIN_QUEUE,
+      name: 'flow-event',
+      jobOptions: { attempts: 3 },
+      payload,
+      children: [new SubEvent({ sub: payload.sub })],
+    });
   }
 }
 ```
@@ -215,13 +231,24 @@ interface SubFlowEventPayload {
 
 class SubFlowEvent extends BullMqFlowEvent<SubFlowEventPayload> {
   constructor(payload: SubFlowEventPayload) {
-    super(SUB_QUEUE, 'sub-flow-event', { attempts: 3 }, payload, []);
+    super({
+      queueName: SUB_QUEUE,
+      name: 'sub-flow-event',
+      jobOptions: { attempts: 3 },
+      payload,
+    });
   }
 }
 
 class MainFlowEvent extends BullMqFlowEvent<FlowEventPayload> {
   constructor(payload: FlowEventPayload) {
-    super(MAIN_QUEUE, 'main-flow-event', { attempts: 3 }, payload, [new SubFlowEvent({ sub: payload.sub })]);
+    super({
+      queueName: MAIN_QUEUE,
+      name: 'main-flow-event',
+      jobOptions: { attempts: 3 },
+      payload,
+      children: [new SubFlowEvent({ sub: payload.sub })],
+    });
   }
 }
 ```
