@@ -19,6 +19,7 @@ This package provides BullMQ integration for the [@event-driven-architecture/cor
 - [Handler Context](#handler-context)
 - [Testing](#testing)
 - [API Reference](#api-reference)
+- [Flow Job Processing](#flow-job-processing)
 
 ---
 
@@ -164,3 +165,101 @@ export class UserCreatedHandler implements IEventHandler<UserCreatedEvent, BullM
   }
 }
 ```
+
+---
+
+## Flow Job Processing
+
+BullMQ supports "flow jobs"—hierarchies of jobs with parent/child relationships. This package provides a way to define, publish, and consume such flows using the `BullMqFlowEvent` class.
+
+> **Note:** Sub-events (children) may also be instances of `BullMqFlowEvent`, allowing for deeply nested flow hierarchies.
+
+### Defining Flow Events
+
+Always use named interfaces for event payloads to ensure type safety and clarity.
+
+```typescript
+import { BullMqEvent, BullMqFlowEvent } from '@event-driven-architecture/bullmq';
+
+const MAIN_QUEUE = 'main-queue';
+const SUB_QUEUE = 'sub-queue';
+
+interface SubEventPayload {
+  sub: string;
+}
+
+interface FlowEventPayload {
+  main: string;
+  sub: string;
+}
+
+class SubEvent extends BullMqEvent<SubEventPayload> {
+  constructor(payload: SubEventPayload) {
+    super(SUB_QUEUE, 'sub-event', { attempts: 3 }, payload);
+  }
+}
+
+class FlowEvent extends BullMqFlowEvent<FlowEventPayload> {
+  constructor(payload: FlowEventPayload) {
+    super(MAIN_QUEUE, 'flow-event', { attempts: 3 }, payload, [new SubEvent({ sub: payload.sub })]);
+  }
+}
+```
+
+#### Example: Nested Flow Events
+
+```typescript
+interface SubFlowEventPayload {
+  sub: string;
+}
+
+class SubFlowEvent extends BullMqFlowEvent<SubFlowEventPayload> {
+  constructor(payload: SubFlowEventPayload) {
+    super(SUB_QUEUE, 'sub-flow-event', { attempts: 3 }, payload, []);
+  }
+}
+
+class MainFlowEvent extends BullMqFlowEvent<FlowEventPayload> {
+  constructor(payload: FlowEventPayload) {
+    super(MAIN_QUEUE, 'main-flow-event', { attempts: 3 }, payload, [new SubFlowEvent({ sub: payload.sub })]);
+  }
+}
+```
+
+### Publishing Flow Events
+
+To publish a flow event, use a publisher (atomic or bulk) and provide a `FlowRegisterService`:
+
+```typescript
+import { AtomicBullMqEventPublisher, FlowRegisterService } from '@event-driven-architecture/bullmq';
+import { FlowProducer } from 'bullmq';
+
+const flowRegisterService = new FlowRegisterService();
+flowRegisterService.addSingleton(new FlowProducer({ connection: { host: 'localhost', port: 6379 } }));
+
+const publisher = new AtomicBullMqEventPublisher(queueRegisterService, flowRegisterService);
+publisher.publish(new FlowEvent({ main: 'main', sub: 'sub' }));
+```
+
+### Consuming Flow Events
+
+When a flow event is consumed, only the parent event's payload is deserialized by default. **Children are not automatically fetched or deserialized for performance reasons.** If you need to access children, you must fetch them manually from BullMQ using the job's ID or other metadata.
+
+This design ensures that handlers remain event-agnostic and only deal with the event payload unless they explicitly need to process children.
+
+#### Example: Handler for a Flow Event
+
+```typescript
+import { BullMqHandlerContext } from '@event-driven-architecture/bullmq';
+import { IEventHandler } from '@event-driven-architecture/core';
+
+import { FlowEvent } from './events/flow-event';
+
+export class FlowEventHandler implements IEventHandler<FlowEvent, BullMqHandlerContext> {
+  async handle(event: FlowEvent, context: BullMqHandlerContext) {}
+}
+```
+
+### Why Children Are Not Fetched by Default
+
+Fetching children for every flow job can be expensive and unnecessary if your handler logic does not require them. By default, `event.$children` is `null`.
