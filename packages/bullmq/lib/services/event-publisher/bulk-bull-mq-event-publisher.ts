@@ -16,14 +16,14 @@ export class BulkBullMqEventPublisher extends BaseBullMQEventPublisher {
 
   publishAll<E extends BullMqEvent<object>>(events: E[]): void {
     const eventQueueNameEventsMap = events.reduce((acc, event) => {
-      acc.set(event.queueName, [...(acc.get(event.queueName) || []), event]);
+      acc.set(event.$queueName, [...(acc.get(event.$queueName) || []), event]);
       return acc;
     }, new Map<string, E[]>());
 
     for (const [queueName, events] of eventQueueNameEventsMap.entries()) {
       this.queueRegisterService
         .get(queueName)
-        .addBulk(events.map((event) => ({ name: event.name, data: event.payload, opts: event.jobOptions })));
+        .addBulk(events.map((event) => ({ name: event.$name, data: event.$payload, opts: event.$jobOptions })));
     }
   }
 }

@@ -15,7 +15,7 @@ export abstract class BaseBullMQEventPublisher implements IEventPublisher<BullMq
     if (event instanceof BullMqFlowEvent) {
       this.getCorrespondFlowProducer(event).add(this.mapFlowEventToFlowJob(event));
     } else {
-      this.queueRegisterService.get(event.queueName).add(event.name, event._serialize(), event.jobOptions);
+      this.queueRegisterService.get(event.$queueName).add(event.$name, event._serialize(), event.$jobOptions);
     }
   }
 
@@ -23,11 +23,11 @@ export abstract class BaseBullMQEventPublisher implements IEventPublisher<BullMq
 
   protected mapFlowEventToFlowJob(event: BullMqFlowEvent<object>): FlowJob {
     return {
-      name: event.name,
+      name: event.$name,
       data: event._serialize(),
-      queueName: event.queueName,
+      queueName: event.$queueName,
       prefix: event.$prefix,
-      opts: event.jobOptions,
+      opts: event.$jobOptions,
       children: event.$children?.map((child) => {
         if (child instanceof BullMqFlowEvent) {
           return this.mapFlowEventToFlowJob(child);
@@ -48,10 +48,10 @@ export abstract class BaseBullMQEventPublisher implements IEventPublisher<BullMq
 
   protected mapEventToFlowJob(event: BullMqEvent<object>): FlowJob {
     return {
-      name: event.name,
+      name: event.$name,
       data: event._serialize(),
-      queueName: event.queueName,
-      opts: event.jobOptions,
+      queueName: event.$queueName,
+      opts: event.$jobOptions,
     };
   }
 }

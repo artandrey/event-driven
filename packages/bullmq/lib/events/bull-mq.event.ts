@@ -9,19 +9,19 @@ export abstract class BullMqEvent<TPayload extends object = object> implements I
     private readonly _payload: TPayload | null,
   ) {}
 
-  public get queueName(): string {
+  public get $queueName(): string {
     return this._queueName;
   }
 
-  public get name(): string {
+  public get $name(): string {
     return this._name;
   }
 
-  public get jobOptions(): Readonly<JobsOptions> {
+  public get $jobOptions(): Readonly<JobsOptions> {
     return this._jobOptions;
   }
 
-  public get payload(): TPayload {
+  public get $payload(): TPayload {
     if (this._payload === null) {
       throw new Error('Payload is null');
     }
@@ -29,7 +29,7 @@ export abstract class BullMqEvent<TPayload extends object = object> implements I
   }
 
   public _serialize(): object {
-    return this.payload;
+    return this.$payload;
   }
 
   public _deserialize(data: object): TPayload {

@@ -11,8 +11,8 @@ export class EventsRegisterService {
   private readonly keyClassTypeMap = new Map<string, Type<BullMqEvent>>();
   protected getKey(entity: BullMqEvent): BullMqEventKey {
     return {
-      queueName: entity.queueName,
-      name: entity.name,
+      queueName: entity.$queueName,
+      name: entity.$name,
     };
   }
 
