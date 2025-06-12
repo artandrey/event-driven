@@ -115,101 +115,119 @@ describe.each([
     }
   });
 
-  it('should publish and consume flow events with sub events represented as bullmq events', async () => {
-    class TestSubEvent extends BullMqEvent {
-      constructor(payload: object) {
-        super(QUEUE_2_NAME, 'test-sub-event', { attempts: 3 }, payload);
+  it.each([
+    {
+      mainPayload: { test: 'test' },
+      subPayload: { test: 'sub' },
+      mainPayloadExpected: { test: 'test' },
+      subPayloadExpected: { test: 'sub' },
+    },
+    {
+      mainPayload: undefined,
+      subPayload: undefined,
+      mainPayloadExpected: {},
+      subPayloadExpected: {},
+    },
+  ])(
+    'should publish and consume flow events with sub events represented as bullmq events',
+    async ({ mainPayload, subPayload, mainPayloadExpected, subPayloadExpected }) => {
+      class TestSubEvent extends BullMqEvent {
+        constructor(payload: object) {
+          super(QUEUE_2_NAME, 'test-sub-event', { attempts: 3 }, payload);
+        }
       }
-    }
 
-    class TestFlowEvent extends BullMqFlowEvent {
-      constructor(mainPayload: object, subPayload: object) {
-        super(QUEUE_1_NAME, 'test-flow-event', { attempts: 3 }, mainPayload, [new TestSubEvent(subPayload)], {
-          flowName: flowName,
-        });
+      class TestFlowEvent extends BullMqFlowEvent {
+        constructor(mainPayload: object, subPayload: object) {
+          super(QUEUE_1_NAME, 'test-flow-event', { attempts: 3 }, mainPayload, [new TestSubEvent(subPayload)], {
+            flowName: flowName,
+          });
+        }
       }
-    }
 
-    eventsRegisterService.register(TestFlowEvent);
-    eventsRegisterService.register(TestSubEvent);
+      eventsRegisterService.register(TestFlowEvent);
+      eventsRegisterService.register(TestSubEvent);
 
-    const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
+      const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
 
-    const mainPayload = {
-      test: 'test',
-    };
+      eventPublisher.publish(new TestFlowEvent(mainPayload, subPayload));
+      await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
+        timeout: 10000,
+      });
 
-    const subPayload = {
-      test: 'sub',
-    };
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestSubEvent);
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0].payload).toEqual(subPayloadExpected);
 
-    eventPublisher.publish(new TestFlowEvent(mainPayload, subPayload));
-    await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
-      timeout: 10000,
-    });
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0]).toBeInstanceOf(TestFlowEvent);
 
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestSubEvent);
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toMatchObject(
-      new TestSubEvent(subPayload),
-    );
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0].payload).toEqual(
+        mainPayloadExpected,
+      );
 
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0]).toBeInstanceOf(TestFlowEvent);
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][1].context).toMatchObject({
+        queue: { name: QUEUE_2_NAME },
+      });
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][1].context).toMatchObject({
+        queue: { name: QUEUE_1_NAME },
+      });
+    },
+  );
 
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0].payload).toEqual(mainPayload);
-
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][1].context).toMatchObject({
-      queue: { name: QUEUE_2_NAME },
-    });
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][1].context).toMatchObject({
-      queue: { name: QUEUE_1_NAME },
-    });
-  });
-
-  it('should publish and consume flow events with sub events represented as bullmq flow events', async () => {
-    class TestSubFlowEvent extends BullMqFlowEvent {
-      constructor(payload: object) {
-        super(QUEUE_2_NAME, 'test-sub-event', { attempts: 3 }, payload, [], {
-          flowName: flowName,
-        });
+  it.each([
+    {
+      mainPayload: { test: 'test' },
+      subPayload: { test: 'sub' },
+      mainPayloadExpected: { test: 'test' },
+      subPayloadExpected: { test: 'sub' },
+    },
+    {
+      mainPayload: undefined,
+      subPayload: undefined,
+      mainPayloadExpected: {},
+      subPayloadExpected: {},
+    },
+  ])(
+    'should publish and consume flow events with sub events represented as bullmq flow events',
+    async ({ mainPayload, subPayload, mainPayloadExpected, subPayloadExpected }) => {
+      class TestSubFlowEvent extends BullMqFlowEvent {
+        constructor(payload: object) {
+          super(QUEUE_2_NAME, 'test-sub-event', { attempts: 3 }, payload, [], {
+            flowName: flowName,
+          });
+        }
       }
-    }
 
-    class TestMainFlowEvent extends BullMqFlowEvent {
-      constructor(mainPayload: object, subPayload: object) {
-        super(QUEUE_1_NAME, 'test-flow-event', { attempts: 3 }, mainPayload, [new TestSubFlowEvent(subPayload)], {
-          flowName: flowName,
-        });
+      class TestMainFlowEvent extends BullMqFlowEvent {
+        constructor(mainPayload: object, subPayload: object) {
+          super(QUEUE_1_NAME, 'test-flow-event', { attempts: 3 }, mainPayload, [new TestSubFlowEvent(subPayload)], {
+            flowName: flowName,
+          });
+        }
       }
-    }
 
-    eventsRegisterService.register(TestMainFlowEvent);
-    eventsRegisterService.register(TestSubFlowEvent);
+      eventsRegisterService.register(TestMainFlowEvent);
+      eventsRegisterService.register(TestSubFlowEvent);
 
-    const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
+      const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
 
-    const mainPayload = {
-      test: 'test',
-    };
+      eventPublisher.publish(new TestMainFlowEvent(mainPayload, subPayload));
 
-    const subPayload = {
-      test: 'sub',
-    };
+      await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
+        timeout: 10000,
+      });
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0].payload).toEqual(subPayloadExpected);
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestSubFlowEvent);
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][1].context).toMatchObject({
+        queue: { name: QUEUE_2_NAME },
+      });
 
-    eventPublisher.publish(new TestMainFlowEvent(mainPayload, subPayload));
-
-    await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
-      timeout: 10000,
-    });
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0].payload).toEqual(subPayload);
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestSubFlowEvent);
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][1].context).toMatchObject({
-      queue: { name: QUEUE_2_NAME },
-    });
-
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0]).toBeInstanceOf(TestMainFlowEvent);
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0].payload).toEqual(mainPayload);
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][1].context).toMatchObject({
-      queue: { name: QUEUE_1_NAME },
-    });
-  });
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0]).toBeInstanceOf(TestMainFlowEvent);
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0].payload).toEqual(
+        mainPayloadExpected,
+      );
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][1].context).toMatchObject({
+        queue: { name: QUEUE_1_NAME },
+      });
+    },
+  );
 });
