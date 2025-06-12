@@ -20,7 +20,7 @@ describe.each([
   {
     publisher: AtomicBullMqEventPublisher,
   },
-])('BullMQ Flow', ({ publisher }) => {
+])('BullMQ Jobs processing', ({ publisher }) => {
   let redisContainer: StartedTestContainer;
   let redisHost: string;
   let redisPort: number;
