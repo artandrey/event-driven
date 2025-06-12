@@ -1,0 +1,32 @@
+{
+  "name": "@event-driven-architecture/bullmq",
+  "version": "0.0.0",
+  "description": "BullMQ package for event-driven architectures in TypeScript server side applications.",
+  "private": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "author": "Andrii Artemenko",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artandrey/event-driven.git"
+  },
+  "bugs": {
+    "url": "https://github.com/artandrey/event-driven/issues"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "devDependencies": {
+    "@event-driven-architecture/core": "^0.2.0",
+    "@testcontainers/redis": "^10.24.2",
+    "bullmq": "^5.48.1",
+    "testcontainers": "^10.24.2"
+  },
+  "peerDependencies": {
+    "@event-driven-architecture/core": "^0.2.0",
+    "bullmq": "^5.48.1"
+  }
+}
