@@ -1,5 +1,5 @@
 import { IEventPublisher } from '@event-driven-architecture/core';
-import { FlowJob } from 'bullmq';
+import { FlowJob, FlowProducer } from 'bullmq';
 
 import { BullMqFlowEvent } from '../../events/bull-mq-flow.event';
 import { BullMqEvent } from '../../events/bull-mq.event';
@@ -13,11 +13,7 @@ export abstract class BaseBullMQEventPublisher implements IEventPublisher<BullMq
 
   publish<E extends BullMqEvent<object>>(event: E): void {
     if (event instanceof BullMqFlowEvent) {
-      if (event.$flowName) {
-        this.flowRegisterService.getNamed(event.$flowName).add(this.mapFlowEventToFlowJob(event));
-      } else {
-        this.flowRegisterService.getSingleton().add(this.mapFlowEventToFlowJob(event));
-      }
+      this.getCorrespondFlowProducer(event).add(this.mapFlowEventToFlowJob(event));
     } else {
       this.queueRegisterService.get(event.queueName).add(event.name, event._serialize(), event.jobOptions);
     }
@@ -40,6 +36,14 @@ export abstract class BaseBullMQEventPublisher implements IEventPublisher<BullMq
         }
       }),
     };
+  }
+
+  protected getCorrespondFlowProducer(event: BullMqFlowEvent<object>): FlowProducer {
+    if (event.$flowName) {
+      return this.flowRegisterService.getNamed(event.$flowName);
+    } else {
+      return this.flowRegisterService.getSingleton();
+    }
   }
 
   protected mapEventToFlowJob(event: BullMqEvent<object>): FlowJob {
