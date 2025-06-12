@@ -1,4 +1,5 @@
 import { BullMqEvent } from '../../events/bull-mq.event';
+import { FlowRegisterService } from '../register';
 import { QueueRegisterService } from '../register/queue-register.service';
 import { BaseBullMQEventPublisher } from './base-bull-mq-event-publisher';
 
@@ -8,8 +9,8 @@ import { BaseBullMQEventPublisher } from './base-bull-mq-event-publisher';
  * But in case one job will be failed to be be added, other jobs will be added successfully.
  */
 export class AtomicBullMqEventPublisher extends BaseBullMQEventPublisher {
-  constructor(queueRegisterService: QueueRegisterService) {
-    super(queueRegisterService);
+  constructor(queueRegisterService: QueueRegisterService, flowRegisterService: FlowRegisterService) {
+    super(queueRegisterService, flowRegisterService);
   }
 
   publishAll<E extends BullMqEvent<object>>(events: E[]): void {

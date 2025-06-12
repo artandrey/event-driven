@@ -1,6 +1,7 @@
 import { IEventBus } from '@event-driven-architecture/core';
-import { Job, Processor, WorkerOptions } from 'bullmq';
+import { FlowJob, Job, Processor, WorkerOptions } from 'bullmq';
 
+import { BullMqFlowEvent } from '../../events';
 import { BullMqEvent } from '../../events/bull-mq.event';
 import { BullMqHandlerContext } from '../../interfaces/bull-mq-handler-context.interface';
 import { EventsRegisterService } from '../register/events-register.service';
@@ -36,7 +37,7 @@ export class BullMqEventConsumerService {
     });
   };
 
-  private mapJobToEvent(job: Job): BullMqEvent {
+  private mapJobToEvent(job: Job | FlowJob): BullMqEvent | BullMqFlowEvent {
     const EventClass = this.eventsRegisterService.getType({
       queueName: job.queueName,
       name: job.name,
@@ -53,6 +54,11 @@ export class BullMqEventConsumerService {
       _name: job.name,
       _jobOptions: job.opts,
     });
+
+    if (eventInstance instanceof BullMqFlowEvent) {
+      (eventInstance as any)._prefix = (job as FlowJob).prefix;
+      (eventInstance as any)._children = null;
+    }
 
     eventInstance._payload = eventInstance._deserialize(job.data);
 

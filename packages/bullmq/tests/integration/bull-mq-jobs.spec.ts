@@ -5,6 +5,7 @@ import {
   BulkBullMqEventPublisher,
   BullMqEvent,
   EventsRegisterService,
+  FlowRegisterService,
   QueueRegisterService,
   WorkerRegisterService,
   WorkerService,
@@ -28,6 +29,7 @@ describe.each([
   let workerRegisterService: WorkerRegisterService;
   let queueRegisterService: QueueRegisterService;
   let eventsRegisterService: EventsRegisterService;
+  let flowRegisterService: FlowRegisterService;
 
   const eventBus = {
     publish: vi.fn(),
@@ -95,7 +97,7 @@ describe.each([
   it('should publish and consume event', async () => {
     eventsRegisterService.register(TestEvent);
 
-    const eventPublisher = new publisher(queueRegisterService);
+    const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
 
     const payload = {
       test: 'test',
@@ -113,7 +115,7 @@ describe.each([
   it('should publish and consume multiple events', async () => {
     eventsRegisterService.register(TestEvent);
 
-    const eventPublisher = new publisher(queueRegisterService);
+    const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
 
     eventPublisher.publishAll([new TestEvent({ test: 'test1' }), new TestEvent({ test: 'test2' })]);
     await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalledTimes(2), {
@@ -134,7 +136,7 @@ describe.each([
   it('should consume event with context', async () => {
     eventsRegisterService.register(TestEvent);
 
-    const eventPublisher = new publisher(queueRegisterService);
+    const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
 
     eventPublisher.publish(new TestEvent({ test: 'test' }));
 

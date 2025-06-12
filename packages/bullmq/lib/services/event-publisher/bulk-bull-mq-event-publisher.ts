@@ -1,4 +1,5 @@
 import { BullMqEvent } from '../../events/bull-mq.event';
+import { FlowRegisterService } from '../register';
 import { QueueRegisterService } from '../register/queue-register.service';
 import { BaseBullMQEventPublisher } from './base-bull-mq-event-publisher';
 
@@ -9,8 +10,8 @@ import { BaseBullMQEventPublisher } from './base-bull-mq-event-publisher';
  * Also, if repeat option is provided in the job options, it will be ignored due to the `addBulk` method behaviour.
  */
 export class BulkBullMqEventPublisher extends BaseBullMQEventPublisher {
-  constructor(queueRegisterService: QueueRegisterService) {
-    super(queueRegisterService);
+  constructor(queueRegisterService: QueueRegisterService, flowRegisterService: FlowRegisterService) {
+    super(queueRegisterService, flowRegisterService);
   }
 
   publishAll<E extends BullMqEvent<object>>(events: E[]): void {
