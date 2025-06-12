@@ -201,7 +201,6 @@ describe.each([
             name: 'test-sub-event',
             jobOptions: { attempts: 3 },
             payload,
-            children: [],
             flowName: flowName ?? undefined,
           });
         }
