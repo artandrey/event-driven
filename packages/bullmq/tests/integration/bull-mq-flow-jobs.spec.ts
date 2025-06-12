@@ -13,16 +13,26 @@ import {
 } from 'packages/bullmq/lib';
 import { BullMqEventConsumerService } from 'packages/bullmq/lib/services/event-consumer/bull-mq-event-consumer.service';
 import { StartedTestContainer } from 'testcontainers';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe.each([
   {
     publisher: BulkBullMqEventPublisher,
+    flowName: 'flow-1',
+  },
+  {
+    publisher: BulkBullMqEventPublisher,
+    flowName: null,
   },
   {
     publisher: AtomicBullMqEventPublisher,
+    flowName: 'flow-1',
   },
-])('BullMQ Flow Jobs processing', ({ publisher }) => {
+  {
+    publisher: AtomicBullMqEventPublisher,
+    flowName: null,
+  },
+])('BullMQ Flow Jobs processing', ({ publisher, flowName }) => {
   let redisContainer: StartedTestContainer;
   let redisHost: string;
   let redisPort: number;
@@ -39,26 +49,14 @@ describe.each([
     synchronouslyConsumeByMultipleHandlers: vi.fn(),
   };
 
-  beforeAll(async () => {
-    redisContainer = await new RedisContainer().start();
-
-    redisHost = redisContainer.getHost();
-    redisPort = redisContainer.getFirstMappedPort();
-  }, 60000);
-
-  afterAll(async () => {
-    await Promise.all(queueRegisterService.getAll().map((queue) => queue.close()));
-    await Promise.all(workerRegisterService.getAll().map((worker) => worker.close()));
-
-    if (redisContainer) {
-      await redisContainer.stop();
-    }
-  });
-
   const QUEUE_1_NAME = 'main-queue';
   const QUEUE_2_NAME = 'sub-queue';
 
   beforeEach(async () => {
+    redisContainer = await new RedisContainer().start();
+
+    redisHost = redisContainer.getHost();
+    redisPort = redisContainer.getFirstMappedPort();
     workerRegisterService = new WorkerRegisterService();
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
@@ -71,7 +69,12 @@ describe.each([
 
     queueRegisterService.add(new Queue(QUEUE_1_NAME, { connection: CONNECTION }));
     queueRegisterService.add(new Queue(QUEUE_2_NAME, { connection: CONNECTION }));
-    flowRegisterService.addSingleton(new FlowProducer({ connection: CONNECTION }));
+
+    if (flowName) {
+      flowRegisterService.addNamed(flowName, new FlowProducer({ connection: CONNECTION }));
+    } else {
+      flowRegisterService.addSingleton(new FlowProducer({ connection: CONNECTION }));
+    }
 
     const eventConsumer = new BullMqEventConsumerService(
       workerRegisterService,
@@ -97,11 +100,19 @@ describe.each([
 
     eventConsumer.init();
     vi.resetAllMocks();
-  });
+  }, 60000);
 
   afterEach(async () => {
     await Promise.all(workerRegisterService.getAll().map((w) => w.close()));
     await Promise.all(queueRegisterService.getAll().map((q) => q.close()));
+    if (flowName) {
+      await flowRegisterService.getNamed(flowName).close();
+    } else {
+      await flowRegisterService.getSingleton().close();
+    }
+    if (redisContainer) {
+      await redisContainer.stop();
+    }
   });
 
   it('should publish and consume flow events with sub events represented as bullmq events', async () => {
@@ -113,7 +124,9 @@ describe.each([
 
     class TestFlowEvent extends BullMqFlowEvent {
       constructor(mainPayload: object, subPayload: object) {
-        super(QUEUE_1_NAME, 'test-flow-event', { attempts: 3 }, mainPayload, [new TestSubEvent(subPayload)]);
+        super(QUEUE_1_NAME, 'test-flow-event', { attempts: 3 }, mainPayload, [new TestSubEvent(subPayload)], {
+          flowName: flowName,
+        });
       }
     }
 
@@ -155,13 +168,17 @@ describe.each([
   it('should publish and consume flow events with sub events represented as bullmq flow events', async () => {
     class TestSubFlowEvent extends BullMqFlowEvent {
       constructor(payload: object) {
-        super(QUEUE_2_NAME, 'test-sub-event', { attempts: 3 }, payload, []);
+        super(QUEUE_2_NAME, 'test-sub-event', { attempts: 3 }, payload, [], {
+          flowName: flowName,
+        });
       }
     }
 
     class TestMainFlowEvent extends BullMqFlowEvent {
       constructor(mainPayload: object, subPayload: object) {
-        super(QUEUE_1_NAME, 'test-flow-event', { attempts: 3 }, mainPayload, [new TestSubFlowEvent(subPayload)]);
+        super(QUEUE_1_NAME, 'test-flow-event', { attempts: 3 }, mainPayload, [new TestSubFlowEvent(subPayload)], {
+          flowName: flowName,
+        });
       }
     }
 
