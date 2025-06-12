@@ -57,7 +57,7 @@ describe('BullMqEventConsumerService', () => {
   describe('handleJob', () => {
     class TestEvent extends BullMqEvent {
       constructor(payload: object) {
-        super('testQueue', 'DummyEvent', { attempts: 3 }, payload);
+        super({ queueName: 'testQueue', name: 'DummyEvent', jobOptions: { attempts: 3 }, payload });
       }
     }
 

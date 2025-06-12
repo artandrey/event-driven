@@ -42,7 +42,7 @@ describe.each([
 
   class TestEvent extends BullMqEvent<object> {
     constructor(payload: object) {
-      super(QUEUE_NAME, 'test-event', { attempts: 3 }, payload);
+      super({ queueName: QUEUE_NAME, name: 'test-event', jobOptions: { attempts: 3 }, payload });
     }
   }
 

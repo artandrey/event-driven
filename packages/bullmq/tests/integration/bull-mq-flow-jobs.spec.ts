@@ -133,14 +133,19 @@ describe.each([
     async ({ mainPayload, subPayload, mainPayloadExpected, subPayloadExpected }) => {
       class TestSubEvent extends BullMqEvent {
         constructor(payload: object) {
-          super(QUEUE_2_NAME, 'test-sub-event', { attempts: 3 }, payload);
+          super({ queueName: QUEUE_2_NAME, name: 'test-sub-event', jobOptions: { attempts: 3 }, payload });
         }
       }
 
       class TestFlowEvent extends BullMqFlowEvent {
         constructor(mainPayload: object, subPayload: object) {
-          super(QUEUE_1_NAME, 'test-flow-event', { attempts: 3 }, mainPayload, [new TestSubEvent(subPayload)], {
-            flowName: flowName,
+          super({
+            queueName: QUEUE_1_NAME,
+            name: 'test-flow-event',
+            jobOptions: { attempts: 3 },
+            payload: mainPayload,
+            children: [new TestSubEvent(subPayload)],
+            flowName: flowName ?? undefined,
           });
         }
       }
@@ -191,16 +196,26 @@ describe.each([
     async ({ mainPayload, subPayload, mainPayloadExpected, subPayloadExpected }) => {
       class TestSubFlowEvent extends BullMqFlowEvent {
         constructor(payload: object) {
-          super(QUEUE_2_NAME, 'test-sub-event', { attempts: 3 }, payload, [], {
-            flowName: flowName,
+          super({
+            queueName: QUEUE_2_NAME,
+            name: 'test-sub-event',
+            jobOptions: { attempts: 3 },
+            payload,
+            children: [],
+            flowName: flowName ?? undefined,
           });
         }
       }
 
       class TestMainFlowEvent extends BullMqFlowEvent {
         constructor(mainPayload: object, subPayload: object) {
-          super(QUEUE_1_NAME, 'test-flow-event', { attempts: 3 }, mainPayload, [new TestSubFlowEvent(subPayload)], {
-            flowName: flowName,
+          super({
+            queueName: QUEUE_1_NAME,
+            name: 'test-flow-event',
+            jobOptions: { attempts: 3 },
+            payload: mainPayload,
+            children: [new TestSubFlowEvent(subPayload)],
+            flowName: flowName ?? undefined,
           });
         }
       }

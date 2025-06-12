@@ -1,7 +1,7 @@
 import { BullMqEvent } from 'packages/bullmq/lib/events/bull-mq.event';
 import { EventsRegisterService } from 'packages/bullmq/lib/services/register/events-register.service';
 
-describe('EventsRegisterService', () => {
+describe.only('EventsRegisterService', () => {
   let eventsRegisterService: EventsRegisterService;
 
   beforeEach(() => {
@@ -11,7 +11,7 @@ describe('EventsRegisterService', () => {
   it('should add BullMqEvent type to register', () => {
     class TestEvent extends BullMqEvent {
       constructor(payload: object) {
-        super('test', 'test', {}, payload);
+        super({ queueName: 'test', name: 'test', jobOptions: {}, payload });
       }
     }
     eventsRegisterService.register(TestEvent);

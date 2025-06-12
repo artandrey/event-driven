@@ -1,15 +1,16 @@
-import { JobsOptions } from 'bullmq';
+import { BullMqEvent, BullMqEventOptions } from './bull-mq.event';
 
-import { BullMqEvent } from './bull-mq.event';
-
-export interface BullMqFlowPublishingOptions {
+export interface BullMqFlowEventOptions<TPayload extends object = object> extends BullMqEventOptions<TPayload> {
   /**
-   * The name of the flow to publish the event to.
-   * If null, the event will be published to the default (singleton) flow.
+   * Children jobs that belong to this flow job.
+   */
+  children?: BullMqEvent<TPayload>[];
+  /**
+   * The name of the flow producer to use. When omitted, the default (singleton) flow producer will be used.
    */
   flowName?: string;
   /**
-   * The prefix of the job options.
+   * Optional key prefix that will be added to the job id.
    */
   prefix?: string;
 }
@@ -18,16 +19,11 @@ export class BullMqFlowEvent<TPayload extends object = object> extends BullMqEve
   protected readonly _children: BullMqEvent<TPayload>[] | null;
   protected readonly _flowName: string | null;
   protected readonly _prefix: string | undefined;
-  constructor(
-    queueName: string,
-    name: string,
-    jobOptions: Readonly<JobsOptions>,
-    payload: TPayload | null,
-    children: BullMqEvent<TPayload>[],
-    options: BullMqFlowPublishingOptions = {},
-  ) {
-    super(queueName, name, jobOptions, payload);
-    this._children = children ?? null;
+
+  constructor(options: BullMqFlowEventOptions<TPayload>) {
+    super(options);
+
+    this._children = options.children ?? null;
     this._flowName = options.flowName ?? null;
     this._prefix = options.prefix;
   }
