@@ -21,7 +21,7 @@ export abstract class BullMqEvent<TPayload extends object = object> implements I
     return this._jobOptions;
   }
 
-  public get $payload(): TPayload {
+  public get payload(): TPayload {
     if (this._payload === null) {
       throw new Error('Payload is null');
     }
@@ -29,7 +29,7 @@ export abstract class BullMqEvent<TPayload extends object = object> implements I
   }
 
   public _serialize(): object {
-    return this.$payload;
+    return this.payload;
   }
 
   public _deserialize(data: object): TPayload {

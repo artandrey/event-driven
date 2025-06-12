@@ -23,7 +23,7 @@ export class BulkBullMqEventPublisher extends BaseBullMQEventPublisher {
     for (const [queueName, events] of eventQueueNameEventsMap.entries()) {
       this.queueRegisterService
         .get(queueName)
-        .addBulk(events.map((event) => ({ name: event.$name, data: event.$payload, opts: event.$jobOptions })));
+        .addBulk(events.map((event) => ({ name: event.$name, data: event.payload, opts: event.$jobOptions })));
     }
   }
 }
