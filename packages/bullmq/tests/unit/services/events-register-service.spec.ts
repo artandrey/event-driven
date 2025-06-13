@@ -1,7 +1,7 @@
 import { BullMqEvent } from 'packages/bullmq/lib/events/bull-mq.event';
 import { EventsRegisterService } from 'packages/bullmq/lib/services/register/events-register.service';
 
-describe.only('EventsRegisterService', () => {
+describe('EventsRegisterService', () => {
   let eventsRegisterService: EventsRegisterService;
 
   beforeEach(() => {
