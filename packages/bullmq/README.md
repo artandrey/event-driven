@@ -26,7 +26,17 @@ This package provides BullMQ integration for the [@event-driven-architecture/cor
 ## Installation
 
 ```bash
+# Using npm
 npm install @event-driven-architecture/bullmq bullmq @event-driven-architecture/core
+
+# Using yarn
+yarn add @event-driven-architecture/bullmq bullmq @event-driven-architecture/core
+
+# Using pnpm
+pnpm add @event-driven-architecture/bullmq bullmq @event-driven-architecture/core
+
+# Using bun
+bun add @event-driven-architecture/bullmq bullmq @event-driven-architecture/core
 ```
 
 > **Note:** `bullmq` and `@event-driven-architecture/core` are peer dependencies and must be installed in your project.
