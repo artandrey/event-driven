@@ -69,5 +69,7 @@ describe('BaseHandlersRegisterService', () => {
         name: 'test',
       },
     });
+
+    expect(service.getHandlerSignatures()).toEqual([{ event: TestEvent, metadata: { name: 'test' } }]);
   });
 });
