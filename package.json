@@ -32,9 +32,6 @@
   "bugs": {
     "url": "https://github.com/artandrey/event-driven/issues"
   },
-  "workspaces": [
-    "packages/core"
-  ],
   "devDependencies": {
     "@changesets/cli": "^2.29.2",
     "@eslint/js": "^9.25.1",

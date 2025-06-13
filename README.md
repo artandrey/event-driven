@@ -5,9 +5,10 @@ A modular, framework-agnostic library for building event-driven architectures in
 ## Packages Done
 
 - [Core](./packages/core/README.md) - Core definitions and interfaces for event-driven architecture
+- [BullMQ](./packages/bullmq/README.md) - BullMQ wrapper
 
 ## Packages Planned
 
-- [BullMQ] - To do
 - [RabbitMQ] - To do
+- [SQS] - To do
 - [Requested by you] - To do
