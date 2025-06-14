@@ -70,7 +70,23 @@ export class UserCreatedEventHandler implements IEventHandler<UserCreatedEvent> 
 
 ### Handler Registration
 
-Event handlers need to be registered with a handler register service. The implementation details depend on your application framework.
+Handlers are registered through an implementation of `IHandlerRegister`. A handler is uniquely identified by two things:
+
+1. The event class it listens for.
+2. Optional **routing metadata** – a free-form object that lets you differentiate handlers listening to the _same_ event class.
+
+This enables scenarios like multi-tenant routing, versioned events, feature flags, and so on.
+
+```typescript
+// singleton handler (single instance provided by you)
+handlerRegister.addHandler({ event: UserCreatedEvent, routingMetadata: { v: 1 } }, new UserCreatedEventHandler());
+
+// scoped / transient handler (register by class, a fresh instance created per invocation)
+handlerRegister.addScopedHandler(
+  { event: UserCreatedEvent }, // no metadata – acts as a catch-all
+  UserCreatedEventHandler,
+);
+```
 
 ## Event Bus
 
@@ -119,14 +135,25 @@ class AppBootstrap {
 
 ### Consuming Events Synchronously
 
-The EventBus provides methods for consuming events synchronously:
+When an event is consumed, you can (optionally) provide the same routing metadata to target specific handlers:
 
 ```typescript
-// Consume by a single handler (throws if multiple handlers exist)
-await eventBus.synchronouslyConsumeByStrictlySingleHandler(new UserCreatedEvent({ userId: '123' }));
+await eventBus.synchronouslyConsumeByStrictlySingleHandler(new UserCreatedEvent({ userId: '123' }), {
+  routingMetadata: { v: 1 },
+});
 
-// Consume by multiple handlers
-await eventBus.synchronouslyConsumeByMultipleHandlers(new UserCreatedEvent({ userId: '123' }));
+await eventBus.synchronouslyConsumeByMultipleHandlers(new UserCreatedEvent({ userId: '123' }), {
+  routingMetadata: { v: 1 },
+});
+```
+
+When consuming events, you can also pass a request-scoped context alongside routing metadata:
+
+```typescript
+await eventBus.synchronouslyConsumeByStrictlySingleHandler(new UserCreatedEvent({ userId: '123' }), {
+  routingMetadata: { v: 1 },
+  context: { requestId: '456' },
+});
 ```
 
 ## Core Definitions
@@ -174,4 +201,56 @@ When consuming events, you can pass context:
 await eventBus.synchronouslyConsumeByStrictlySingleHandler(new UserCreatedEvent({ userId: '123' }), {
   context: { requestId: '456' },
 });
+```
+
+## Putting it all together – Bootstrapping a minimal in-memory event system
+
+The snippet below mirrors the setup used in the test suite and shows how the main pieces plug together.
+
+```typescript
+import {
+  BaseHandlerRegister,
+  EventBus,
+  IEvent,
+  IEventBus,
+  IEventHandler,
+  IEventPublisher,
+  IHandlerRegister,
+} from '@event-driven-architecture/core';
+
+// 1. Define an event
+export class UserCreatedEvent implements IEvent<{ userId: string }> {
+  constructor(public readonly payload: { userId: string }) {}
+}
+
+// 2. Implement a handler
+class UserCreatedHandler implements IEventHandler<UserCreatedEvent> {
+  handle(event: UserCreatedEvent): void {
+    console.log('User created (v=1):', event.payload.userId);
+  }
+}
+
+// 3. Optional: implement a publisher (here we stub it)
+const inMemoryPublisher: IEventPublisher = {
+  publish: (event) => console.log('Published', event),
+  publishAll: (events) => console.log('Published many', events),
+};
+
+// 4. Wire everything together
+const register: IHandlerRegister = new BaseHandlerRegister();
+register.addHandler({ event: UserCreatedEvent, routingMetadata: { v: 1 } }, new UserCreatedHandler());
+
+const eventBus: IEventBus = new EventBus(register);
+eventBus.publisher = inMemoryPublisher;
+
+// 5. Emit and consume an event
+const event = new UserCreatedEvent({ userId: '1' });
+
+await eventBus.synchronouslyConsumeByStrictlySingleHandler(event, {
+  routingMetadata: { v: 1 },
+});
+// log: User created (v=1): 1 from UserCreatedHandler
+
+// Or publish to forward it to the configured publisher
+eventBus.publish(event);
 ```

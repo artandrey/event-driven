@@ -3,6 +3,12 @@ import { IEvent } from './event.interface';
 import { IEventHandlerSignature } from './handler-signature.interface';
 import { Type } from './type.interface';
 
+export interface IHandlerRetrievalOptions<E = unknown> {
+  event: E;
+  routingMetadata?: unknown;
+  context?: object;
+}
+
 /**
  * Handler register service that manages event handlers.
  * Responsible for storing handlers and retrieving handler signatures.
@@ -12,23 +18,17 @@ import { Type } from './type.interface';
 export interface IHandlerRegister<T = IEventHandler<IEvent>, TypeT extends Type<T> = Type<T>> {
   /**
    * Adds a handler to the handlers map
-   * @param handlerKey The key to store the handler under
+   * @param handlerSignature The handler signature to store the handler under
    * @param instance The handler instance
    */
-  addHandler(handlerKey: string, instance: T): void;
+  addHandler(handlerSignature: IEventHandlerSignature, instance: T): void;
 
   /**
    * Adds a scoped handler to the scopedHandlers map
-   * @param handlerKey The key to store the handler under
+   * @param handlerSignature The handler signature to store the handler under
    * @param handler The handler type
    */
-  addScopedHandler(handlerKey: string, handler: TypeT): void;
-
-  /**
-   * Adds a handler signature to the handlersSignatures array
-   * @param signature The handler signature to add
-   */
-  addHandlerSignature(signature: IEventHandlerSignature): void;
+  addScopedHandler(handlerSignature: IEventHandlerSignature, handler: TypeT): void;
 
   /**
    * Gets handlers for a specific event.
@@ -36,14 +36,7 @@ export interface IHandlerRegister<T = IEventHandler<IEvent>, TypeT extends Type<
    * @param context Optional context for scoped handlers
    * @returns A promise that resolves to an array of handlers or undefined
    */
-  get<E>(event: E, context?: object): Promise<T[] | undefined>;
-
-  /**
-   * Gets the name of an event.
-   * @param event The event to get the name for
-   * @returns The name of the event
-   */
-  getName<E>(event: E): string;
+  get<E>(options: IHandlerRetrievalOptions<E>): Promise<T[] | undefined>;
 
   /**
    * Gets the signatures of all registered handlers.

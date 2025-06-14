@@ -44,7 +44,11 @@ export class EventBus<TEvent extends IEvent = IEvent> implements IEventBus<TEven
   }
 
   async synchronouslyConsumeByStrictlySingleHandler(event: TEvent, options?: IHandlerCallOptions): Promise<void> {
-    const handlers = await this.handlersRegister.get(event, options?.context);
+    const handlers = await this.handlersRegister.get({
+      event,
+      context: options?.context,
+      routingMetadata: options?.routingMetadata,
+    });
 
     if (!handlers || handlers.length === 0) {
       throw new HandlerNotFoundException();
@@ -56,7 +60,11 @@ export class EventBus<TEvent extends IEvent = IEvent> implements IEventBus<TEven
   }
 
   async synchronouslyConsumeByMultipleHandlers(event: TEvent, options?: IHandlerCallOptions): Promise<void> {
-    const handlers = await this.handlersRegister.get(event, options?.context);
+    const handlers = await this.handlersRegister.get({
+      event,
+      context: options?.context,
+      routingMetadata: options?.routingMetadata,
+    });
     if (!handlers || handlers.length === 0) {
       throw new HandlerNotFoundException();
     }
