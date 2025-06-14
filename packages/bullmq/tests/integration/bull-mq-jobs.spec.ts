@@ -12,7 +12,7 @@ import {
 } from 'packages/bullmq/lib';
 import { BullMqEventConsumerService } from 'packages/bullmq/lib/services/event-consumer/bull-mq-event-consumer.service';
 import { StartedTestContainer } from 'testcontainers';
-import { afterAll, beforeAll, describe, expect } from 'vitest';
+import { afterEach, beforeEach, describe, expect } from 'vitest';
 
 describe.each([
   {
@@ -46,26 +46,16 @@ describe.each([
     }
   }
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     redisContainer = await new RedisContainer().start();
 
     redisHost = redisContainer.getHost();
     redisPort = redisContainer.getFirstMappedPort();
-  }, 60000);
 
-  afterAll(async () => {
-    await Promise.all(queueRegisterService.getAll().map((queue) => queue.close()));
-    await Promise.all(workerRegisterService.getAll().map((worker) => worker.close()));
-
-    if (redisContainer) {
-      await redisContainer.stop();
-    }
-  });
-
-  beforeEach(async () => {
     workerRegisterService = new WorkerRegisterService();
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
+    flowRegisterService = new FlowRegisterService();
 
     const CONNECTION: ConnectionOptions = {
       host: redisHost,
@@ -92,6 +82,15 @@ describe.each([
 
     eventConsumer.init();
     vi.resetAllMocks();
+  });
+
+  afterEach(async () => {
+    await Promise.all(workerRegisterService.getAll().map((worker) => worker.close()));
+    await Promise.all(queueRegisterService.getAll().map((queue) => queue.close()));
+
+    if (redisContainer) {
+      await redisContainer.stop();
+    }
   });
 
   it('should publish and consume event', async () => {
