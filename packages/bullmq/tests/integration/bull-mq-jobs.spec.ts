@@ -82,7 +82,7 @@ describe.each([
 
     eventConsumer.init();
     vi.resetAllMocks();
-  });
+  }, 60000);
 
   afterEach(async () => {
     await Promise.all(workerRegisterService.getAll().map((worker) => worker.close()));
