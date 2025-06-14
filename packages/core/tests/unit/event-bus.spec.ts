@@ -50,7 +50,7 @@ describe('EventBus', () => {
   it('should pass event to singleton handlers', async () => {
     const handler = new TestHandler();
     const handlerSpy = vi.spyOn(handler, 'handle');
-    handlerRegister.addHandler(TestEvent.name, handler);
+    handlerRegister.addHandler({ event: TestEvent }, handler);
 
     await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent());
 
@@ -64,7 +64,7 @@ describe('EventBus', () => {
         spy(event);
       }
     }
-    handlerRegister.addScopedHandler(TestEvent.name, ScopedHandler);
+    handlerRegister.addScopedHandler({ event: TestEvent }, ScopedHandler);
 
     await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent());
 
@@ -78,7 +78,7 @@ describe('EventBus', () => {
         spy(event);
       }
     }
-    handlerRegister.addScopedHandler(TestEvent.name, ScopedHandler);
+    handlerRegister.addScopedHandler({ event: TestEvent }, ScopedHandler);
 
     await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent());
     await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent());
@@ -91,8 +91,8 @@ describe('EventBus', () => {
   });
 
   it('should throw error if consumed by single handler and multiple handlers are found', async () => {
-    handlerRegister.addHandler(TestEvent.name, new TestHandler());
-    handlerRegister.addHandler(TestEvent.name, new TestHandler());
+    handlerRegister.addHandler({ event: TestEvent }, new TestHandler());
+    handlerRegister.addHandler({ event: TestEvent }, new TestHandler());
 
     await expect(eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent())).rejects.toThrow();
   });
@@ -102,8 +102,8 @@ describe('EventBus', () => {
     const handler2 = new TestHandler();
     const handlerSpy1 = vi.spyOn(handler1, 'handle');
     const handlerSpy2 = vi.spyOn(handler2, 'handle');
-    handlerRegister.addHandler(TestEvent.name, handler1);
-    handlerRegister.addHandler(TestEvent.name, handler2);
+    handlerRegister.addHandler({ event: TestEvent }, handler1);
+    handlerRegister.addHandler({ event: TestEvent }, handler2);
 
     await eventBus.synchronouslyConsumeByMultipleHandlers(new TestEvent());
 
@@ -120,7 +120,7 @@ describe('EventBus', () => {
   it('should throw error while synchronously consuming event by single handler if handler throws error', async () => {
     const handler = new TestHandler();
     vi.spyOn(handler, 'handle').mockRejectedValue(new Error('Test error'));
-    handlerRegister.addHandler(TestEvent.name, handler);
+    handlerRegister.addHandler({ event: TestEvent }, handler);
 
     await expect(eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent())).rejects.toThrow();
   });
@@ -130,6 +130,112 @@ describe('EventBus', () => {
   it('should throw error while synchronously consuming event by multiple handlers if handler throws error', async () => {
     const handler = new TestHandler();
     vi.spyOn(handler, 'handle').mockRejectedValue(new Error('Test error'));
-    handlerRegister.addHandler(TestEvent.name, handler);
+    handlerRegister.addHandler({ event: TestEvent }, handler);
+  });
+
+  it('should pass event to scoped handlers with matching routing metadata', async () => {
+    const expectedHandlerSpy = vi.fn();
+    const thirdPartyHandlerSpy = vi.fn();
+    class ScopedHandler implements IEventHandler<TestEvent> {
+      handle(event: TestEvent): void {
+        expectedHandlerSpy(event);
+      }
+    }
+
+    class ThirdPartyHandler implements IEventHandler<TestEvent> {
+      handle(event: TestEvent): void {
+        thirdPartyHandlerSpy(event);
+      }
+    }
+
+    handlerRegister.addScopedHandler({ event: TestEvent, routingMetadata: { v: 1 } }, ScopedHandler);
+    handlerRegister.addScopedHandler({ event: TestEvent }, ThirdPartyHandler);
+
+    await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent(), {
+      routingMetadata: { v: 1 },
+    });
+
+    expect(expectedHandlerSpy).toHaveBeenCalledWith(new TestEvent());
+    expect(thirdPartyHandlerSpy).not.toHaveBeenCalled();
+  });
+
+  it('should pass event to singleton handlers with matching routing metadata', async () => {
+    const expectedHandlerSpy = vi.fn();
+    const thirdPartyHandlerSpy = vi.fn();
+    class ScopedHandler implements IEventHandler<TestEvent> {
+      handle(event: TestEvent): void {
+        expectedHandlerSpy(event);
+      }
+    }
+
+    class ThirdPartyHandler implements IEventHandler<TestEvent> {
+      handle(event: TestEvent): void {
+        thirdPartyHandlerSpy(event);
+      }
+    }
+
+    handlerRegister.addHandler({ event: TestEvent, routingMetadata: { v: 1 } }, new ScopedHandler());
+    handlerRegister.addHandler({ event: TestEvent }, new ThirdPartyHandler());
+
+    await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent(), {
+      routingMetadata: { v: 1 },
+    });
+
+    expect(expectedHandlerSpy).toHaveBeenCalledWith(new TestEvent());
+    expect(thirdPartyHandlerSpy).not.toHaveBeenCalled();
+  });
+
+  it('should pass event to multiple scoped handlers with matching routing metadata', async () => {
+    const expectedHandlerSpy1 = vi.fn();
+    const expectedHandlerSpy2 = vi.fn();
+
+    class ExpectedHandler1 implements IEventHandler<TestEvent> {
+      handle(event: TestEvent): void {
+        expectedHandlerSpy1(event);
+      }
+    }
+
+    class ExpectedHandler2 implements IEventHandler<TestEvent> {
+      handle(event: TestEvent): void {
+        expectedHandlerSpy2(event);
+      }
+    }
+
+    handlerRegister.addScopedHandler({ event: TestEvent, routingMetadata: { v: 1 } }, ExpectedHandler1);
+    handlerRegister.addScopedHandler({ event: TestEvent, routingMetadata: { v: 1 } }, ExpectedHandler2);
+
+    await eventBus.synchronouslyConsumeByMultipleHandlers(new TestEvent(), {
+      routingMetadata: { v: 1 },
+    });
+
+    expect(expectedHandlerSpy1).toHaveBeenCalledWith(new TestEvent());
+    expect(expectedHandlerSpy2).toHaveBeenCalledWith(new TestEvent());
+  });
+
+  it('should pass event to multiple singleton handlers with matching routing metadata', async () => {
+    const expectedHandlerSpy1 = vi.fn();
+    const expectedHandlerSpy2 = vi.fn();
+
+    class ExpectedHandler1 implements IEventHandler<TestEvent> {
+      handle(event: TestEvent): void {
+        expectedHandlerSpy1(event);
+      }
+    }
+
+    class ExpectedHandler2 implements IEventHandler<TestEvent> {
+      handle(event: TestEvent): void {
+        expectedHandlerSpy2(event);
+      }
+    }
+
+    handlerRegister.addHandler({ event: TestEvent, routingMetadata: { v: 1 } }, new ExpectedHandler1());
+    handlerRegister.addHandler({ event: TestEvent, routingMetadata: { v: 1 } }, new ExpectedHandler2());
+
+    await eventBus.synchronouslyConsumeByMultipleHandlers(new TestEvent(), {
+      routingMetadata: { v: 1 },
+    });
+
+    expect(expectedHandlerSpy1).toHaveBeenCalledWith(new TestEvent());
+    expect(expectedHandlerSpy2).toHaveBeenCalledWith(new TestEvent());
   });
 });

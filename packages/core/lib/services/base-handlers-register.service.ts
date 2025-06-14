@@ -1,37 +1,45 @@
 import { Type } from '../interfaces';
-import { EventOption } from '../interfaces/event-handler.interface';
-import { IHandlerRegister } from '../interfaces/handler-register.interface';
+import { IHandlerRegister, IHandlerRetrievalOptions } from '../interfaces/handler-register.interface';
 import { IEventHandlerSignature } from '../interfaces/handler-signature.interface';
+import { ObjectHashMap } from '../util/object-hash-map';
+
+export interface IHandlerKey {
+  event: string;
+  routingMetadata: unknown;
+}
 
 export class BaseHandlerRegister<T, TypeT extends Type<T> = Type<T>> implements IHandlerRegister<T, TypeT> {
-  private handlers = new Map<string, Set<T>>();
-  private scopedHandlers = new Map<string, Set<TypeT>>();
+  private handlers = new ObjectHashMap<IHandlerKey, Set<T>>();
+  private scopedHandlers = new ObjectHashMap<IHandlerKey, Set<TypeT>>();
   private handlersSignatures: IEventHandlerSignature[] = [];
 
-  addHandler(handlerKey: string, instance: T): void {
+  public addHandler(handlerSignature: IEventHandlerSignature, instance: T): void {
+    const handlerKey = this.handlerSignatureToHandlerKey(handlerSignature);
     const set = this.handlers.get(handlerKey) ?? new Set();
     this.handlers.set(handlerKey, set.add(instance));
+    this.addHandlerSignature(handlerSignature);
   }
 
-  addScopedHandler(handlerKey: string, handler: TypeT): void {
+  public addScopedHandler(handlerSignature: IEventHandlerSignature, handler: TypeT): void {
+    const handlerKey = this.handlerSignatureToHandlerKey(handlerSignature);
     const set = this.scopedHandlers.get(handlerKey) ?? new Set();
     this.scopedHandlers.set(handlerKey, set.add(handler));
+    this.addHandlerSignature(handlerSignature);
   }
 
-  addHandlerSignature(signature: IEventHandlerSignature): void {
+  private addHandlerSignature(signature: IEventHandlerSignature): void {
     this.handlersSignatures.push(signature);
   }
 
-  async get<E>(event: E, context?: object): Promise<T[] | undefined> {
-    const eventName = this.getName(event);
-
-    const handlerKey = this.buildHandlerKey(eventName);
+  public async get<E>(options: IHandlerRetrievalOptions<E>): Promise<T[] | undefined> {
+    const handlerKey = this.handlerRetrievalOptionsToHandlerKey(options);
     const singletonHandlers = [...(this.handlers.get(handlerKey) ?? [])];
 
     const handlerTypes = this.scopedHandlers.get(handlerKey);
+
     if (!handlerTypes) return singletonHandlers;
 
-    const scopedHandlers = await this.getScopedHandlers(handlerTypes, context);
+    const scopedHandlers = await this.getScopedHandlers(handlerTypes, options.context);
     return [...singletonHandlers, ...scopedHandlers];
   }
 
@@ -50,25 +58,27 @@ export class BaseHandlerRegister<T, TypeT extends Type<T> = Type<T>> implements 
     return instances;
   }
 
-  getName<E>(event: E): string {
+  private getName<E>(event: E): string {
     const { constructor } = Object.getPrototypeOf(event);
 
     return constructor.name as string;
   }
 
-  getHandlerSignatures(): Readonly<IEventHandlerSignature[]> {
-    return this.handlersSignatures;
+  private handlerSignatureToHandlerKey(handlerSignature: IEventHandlerSignature): IHandlerKey {
+    return {
+      event: handlerSignature.event.name,
+      routingMetadata: handlerSignature.routingMetadata,
+    };
   }
 
-  private buildHandlerKey(eventName: string): string;
-  private buildHandlerKey(eventOptions: EventOption): string;
-  private buildHandlerKey(event: EventOption | string): string {
-    if (typeof event === 'string') {
-      return event;
-    }
-    if (typeof event === 'function') {
-      return event.name;
-    }
-    return event.event.name;
+  private handlerRetrievalOptionsToHandlerKey(options: IHandlerRetrievalOptions): IHandlerKey {
+    return {
+      event: this.getName(options.event),
+      routingMetadata: options.routingMetadata,
+    };
+  }
+
+  public getHandlerSignatures(): Readonly<IEventHandlerSignature[]> {
+    return this.handlersSignatures;
   }
 }
