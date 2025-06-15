@@ -1,5 +1,11 @@
 # @event-driven-architecture/core
 
+## 0.4.0
+
+### Minor Changes
+
+- ec65bb6: Update intefaces naming: remove 'I' prefix from interfaces naming
+
 ## 0.3.0
 
 ### Minor Changes
