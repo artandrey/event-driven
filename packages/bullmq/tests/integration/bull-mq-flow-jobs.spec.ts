@@ -1,3 +1,4 @@
+import { BaseHandlerRegister } from '@event-driven-architecture/core';
 import { RedisContainer } from '@testcontainers/redis';
 import { ConnectionOptions, FlowProducer, Queue } from 'bullmq';
 import {
@@ -96,6 +97,7 @@ describe.each([
       ],
       new WorkerService(workerRegisterService),
       eventBus,
+      new BaseHandlerRegister(),
     );
 
     eventConsumer.init();

@@ -1,9 +1,10 @@
-import { EventBus } from '@event-driven-architecture/core';
+import { EventBus, HandlerRegister, Type } from '@event-driven-architecture/core';
 import { FlowJob, Job, Processor, WorkerOptions } from 'bullmq';
 
 import { BullMqFlowEvent } from '../../events';
 import { BullMqEvent } from '../../events/bull-mq.event';
 import { BullMqHandlerContext } from '../../interfaces/bull-mq-handler-context.interface';
+import { isBullMqEventRoutingMetadata } from '../../util/map-bull-mq-event-to-routing-metadata';
 import { EventsRegisterService } from '../register/events-register.service';
 import { QueueRegisterService } from '../register/queue-register.service';
 import { WorkerRegisterService } from '../register/workers-register.service';
@@ -22,12 +23,20 @@ export class BullMqEventConsumerService {
     private readonly consumerOptions: BullMqEventConsumerOptions[],
     private readonly workerService: WorkerService,
     private readonly eventBus: EventBus,
+    private readonly handlerRegisterService: HandlerRegister,
   ) {}
 
   public init() {
     this.consumerOptions.forEach((consumerOptions) => {
       this.workerService.createWorker(consumerOptions.queueName, this.handleJob, consumerOptions.workerOptions);
     });
+
+    this.handlerRegisterService
+      .getHandlerSignatures()
+      .filter((handlerSignature) => isBullMqEventRoutingMetadata(handlerSignature.routingMetadata))
+      .forEach((handlerSignature) => {
+        this.eventsRegisterService.register(handlerSignature.event as Type<BullMqEvent>);
+      });
   }
 
   private handleJob: Processor = async (job: Job, token?: string) => {
