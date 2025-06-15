@@ -12,7 +12,7 @@ This package provides BullMQ integration for the [@event-driven-architecture/cor
 - [Installation](#installation)
 - [Defining Events](#defining-events)
 - [Creating Event Handlers](#creating-event-handlers)
-- [Registering Events and Queues](#registering-events-and-queues)
+- [Registering Queues and Handlers](#registering-queues-and-handlers)
 - [Publishing Events](#publishing-events)
   - [Atomic vs Bulk Publishing](#atomic-vs-bulk-publishing)
 - [Consuming Events](#consuming-events)
@@ -85,20 +85,38 @@ export class UserCreatedHandler implements IEventHandler<UserCreatedEvent> {
 
 ---
 
-## Registering Events and Queues
+## Registering Queues and Handlers
 
-Register your event classes and queues so the system can resolve and route events correctly.
+Queues still need to be registered explicitly, but **events are now discovered automatically from your handler signatures**.  
+Use the `HandlesBullMq` helper to bind an event class to its handler; the consumer service will take care of registering the event class. No manual `eventsRegisterService.register(...)` calls are required anymore.
 
 ```typescript
-import { EventsRegisterService, QueueRegisterService } from '@event-driven-architecture/bullmq';
+import {
+  EventsRegisterService,
+  HandlesBullMq,
+  QueueRegisterService,
+  WorkerRegisterService,
+  WorkerService,
+} from '@event-driven-architecture/bullmq';
+import { BaseHandlerRegister } from '@event-driven-architecture/core';
 import { Queue } from 'bullmq';
 
-const eventsRegisterService = new EventsRegisterService();
-eventsRegisterService.register(UserCreatedEvent);
+import { UserCreatedEvent } from './events/user-created.event';
+import { UserCreatedHandler } from './handlers/user-created.handler';
 
+// 1  Create the required register services
+const eventsRegisterService = new EventsRegisterService();
 const queueRegisterService = new QueueRegisterService();
+const handlerRegisterService = new BaseHandlerRegister();
+const workerRegisterService = new WorkerRegisterService();
+const workerService = new WorkerService(workerRegisterService);
+
+// 2  Register your BullMQ queue instance
 const userQueue = new Queue('user-queue', { connection: { host: 'localhost', port: 6379 } });
 queueRegisterService.add(userQueue);
+
+// 3  Bind the handler to the event
+handlerRegisterService.addHandler(HandlesBullMq(UserCreatedEvent), new UserCreatedHandler());
 ```
 
 ---
@@ -135,30 +153,50 @@ bulkPublisher.publishAll([new UserCreatedEvent({ userId: '1' }), new UserCreated
 
 ## Consuming Events
 
-Set up a consumer to process events from the queue and dispatch them to your event bus. The consumer is responsible for mapping BullMQ jobs to your event classes and invoking the appropriate handlers via the event bus.
+The consumer wires together three things:
+
+1. A **Worker** per queue (created via `WorkerService.createWorker`). Workers are stored inside `WorkerRegisterService`, keyed by queue name.
+2. The **QueueRegisterService** so the consumer can resolve the underlying `Queue` object when forwarding context to handlers.
+3. The **EventsRegisterService / HandlerRegisterService** pair that lets the consumer map incoming jobs to the right event class and handler.
 
 ```typescript
-import { BullMqEventConsumerService, WorkerRegisterService, WorkerService } from '@event-driven-architecture/bullmq';
+import {
+  BullMqEventConsumerService,
+  QueueRegisterService,
+  WorkerRegisterService,
+  WorkerService,
+} from '@event-driven-architecture/bullmq';
 import { IEventBus } from '@event-driven-architecture/core';
+import { Queue } from 'bullmq';
 
 const workerRegisterService = new WorkerRegisterService();
 const workerService = new WorkerService(workerRegisterService);
+const handlerRegisterService = new BaseHandlerRegister();
+
+// Queue registration
+const queueRegisterService = new QueueRegisterService();
+const userQueue = new Queue('user-queue', { connection: { host: 'localhost', port: 6379 } });
+queueRegisterService.add(userQueue);
+
+const consumerOptions = [
+  {
+    queueName: 'user-queue',
+    // Any valid BullMQ WorkerOptions may go here (concurrency, connection, etc.)
+    workerOptions: { connection: { host: 'localhost', port: 6379 } },
+  },
+];
 
 const consumer = new BullMqEventConsumerService(
   workerRegisterService,
   queueRegisterService,
   eventsRegisterService,
-  [
-    {
-      queueName: 'user-queue',
-      workerOptions: { connection: { host: 'localhost', port: 6379 } },
-    },
-  ],
+  consumerOptions,
   workerService,
-  eventBus, // Your implementation of IEventBus
+  eventBus,
+  handlerRegisterService,
 );
 
-consumer.init();
+consumer.init(); // Spawns the workers and starts listening for jobs
 ```
 
 ---
