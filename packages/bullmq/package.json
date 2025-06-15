@@ -1,6 +1,6 @@
 {
   "name": "@event-driven-architecture/bullmq",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "BullMQ package for event-driven architectures in TypeScript server side applications.",
   "private": false,
   "files": [
