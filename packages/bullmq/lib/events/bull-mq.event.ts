@@ -1,4 +1,4 @@
-import { IEvent } from '@event-driven-architecture/core';
+import { Event } from '@event-driven-architecture/core';
 import { JobsOptions } from 'bullmq';
 
 export interface BullMqEventOptions<TPayload extends object = object> {
@@ -12,7 +12,7 @@ export interface BullMqEventOptions<TPayload extends object = object> {
   payload: TPayload | null;
 }
 
-export abstract class BullMqEvent<TPayload extends object = object> implements IEvent<TPayload> {
+export abstract class BullMqEvent<TPayload extends object = object> implements Event<TPayload> {
   protected readonly _queueName: string;
   protected readonly _name: string;
   protected readonly _jobOptions: Readonly<JobsOptions> | undefined;

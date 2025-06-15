@@ -1,11 +1,11 @@
-import { IEventPublisher } from '@event-driven-architecture/core';
+import { EventPublisher } from '@event-driven-architecture/core';
 import { FlowJob, FlowProducer } from 'bullmq';
 
 import { BullMqFlowEvent } from '../../events/bull-mq-flow.event';
 import { BullMqEvent } from '../../events/bull-mq.event';
 import { FlowRegisterService, QueueRegisterService } from '../register';
 
-export abstract class BaseBullMQEventPublisher implements IEventPublisher<BullMqEvent> {
+export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqEvent> {
   constructor(
     protected readonly queueRegisterService: QueueRegisterService,
     protected readonly flowRegisterService: FlowRegisterService,

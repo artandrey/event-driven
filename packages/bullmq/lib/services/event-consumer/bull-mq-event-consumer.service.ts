@@ -1,4 +1,4 @@
-import { IEventBus } from '@event-driven-architecture/core';
+import { EventBus } from '@event-driven-architecture/core';
 import { FlowJob, Job, Processor, WorkerOptions } from 'bullmq';
 
 import { BullMqFlowEvent } from '../../events';
@@ -21,7 +21,7 @@ export class BullMqEventConsumerService {
     private readonly eventsRegisterService: EventsRegisterService,
     private readonly consumerOptions: BullMqEventConsumerOptions[],
     private readonly workerService: WorkerService,
-    private readonly eventBus: IEventBus,
+    private readonly eventBus: EventBus,
   ) {}
 
   public init() {
