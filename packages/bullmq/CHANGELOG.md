@@ -1,5 +1,12 @@
 # @event-driven-architecture/bullmq
 
+## 1.1.0
+
+### Minor Changes
+
+- b0c55f2: Add automatic metadata creation and event registration through HandlesBullMq and BullMqEventConsumerService
+- 5db7e74: Migrate to @event-driven-architecture/core 0.4.0
+
 ## 1.0.0
 
 ### Patch Changes
