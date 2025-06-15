@@ -1,11 +1,11 @@
-import { IEvent } from './event.interface';
+import { Event } from './event.interface';
 
 export enum EventHandlerScope {
   SINGLETON = 'singleton',
   SCOPED = 'scoped',
 }
 
-export type EventSignature = new (...args: any[]) => IEvent;
+export type EventSignature = new (...args: any[]) => Event;
 export type EventOption =
   | EventSignature
   | {
@@ -13,6 +13,6 @@ export type EventOption =
       metadata?: unknown;
     };
 
-export interface IEventHandler<TEvent extends IEvent = IEvent, TContext = void> {
+export interface EventHandler<TEvent extends Event = Event, TContext = void> {
   handle(event: TEvent, context: TContext): void;
 }

@@ -1,32 +1,32 @@
 import {
+  BaseEventBus,
   BaseHandlerRegister,
+  Event,
   EventBus,
-  IEvent,
-  IEventBus,
-  IEventHandler,
-  IEventPublisher,
-  IHandlerRegister,
+  EventHandler,
+  EventPublisher,
+  HandlerRegister,
 } from 'packages/core/lib';
 
-class TestEvent implements IEvent<object> {
+class TestEvent implements Event<object> {
   payload: Readonly<object>;
 }
 
-class TestHandler implements IEventHandler<TestEvent> {
+class TestHandler implements EventHandler<TestEvent> {
   handle(): void {}
 }
 
 describe('EventBus', () => {
-  let eventBus: IEventBus;
-  let handlerRegister: IHandlerRegister;
-  const publisher: IEventPublisher = {
+  let eventBus: EventBus;
+  let handlerRegister: HandlerRegister;
+  const publisher: EventPublisher = {
     publish: vi.fn(),
     publishAll: vi.fn(),
   };
 
   beforeEach(() => {
     handlerRegister = new BaseHandlerRegister();
-    const concreteEventBus = new EventBus(handlerRegister);
+    const concreteEventBus = new BaseEventBus(handlerRegister);
     concreteEventBus.publisher = publisher;
     eventBus = concreteEventBus;
   });
@@ -59,7 +59,7 @@ describe('EventBus', () => {
 
   it('should pass event to scoped handlers', async () => {
     const spy = vi.fn();
-    class ScopedHandler implements IEventHandler<TestEvent> {
+    class ScopedHandler implements EventHandler<TestEvent> {
       handle(event: TestEvent): void {
         spy(event);
       }
@@ -73,7 +73,7 @@ describe('EventBus', () => {
 
   it('should create new scoped handlers instances for each call', async () => {
     const spy = vi.fn();
-    class ScopedHandler implements IEventHandler<TestEvent> {
+    class ScopedHandler implements EventHandler<TestEvent> {
       handle(event: TestEvent): void {
         spy(event);
       }
@@ -136,13 +136,13 @@ describe('EventBus', () => {
   it('should pass event to scoped handlers with matching routing metadata', async () => {
     const expectedHandlerSpy = vi.fn();
     const thirdPartyHandlerSpy = vi.fn();
-    class ScopedHandler implements IEventHandler<TestEvent> {
+    class ScopedHandler implements EventHandler<TestEvent> {
       handle(event: TestEvent): void {
         expectedHandlerSpy(event);
       }
     }
 
-    class ThirdPartyHandler implements IEventHandler<TestEvent> {
+    class ThirdPartyHandler implements EventHandler<TestEvent> {
       handle(event: TestEvent): void {
         thirdPartyHandlerSpy(event);
       }
@@ -162,13 +162,13 @@ describe('EventBus', () => {
   it('should pass event to singleton handlers with matching routing metadata', async () => {
     const expectedHandlerSpy = vi.fn();
     const thirdPartyHandlerSpy = vi.fn();
-    class ScopedHandler implements IEventHandler<TestEvent> {
+    class ScopedHandler implements EventHandler<TestEvent> {
       handle(event: TestEvent): void {
         expectedHandlerSpy(event);
       }
     }
 
-    class ThirdPartyHandler implements IEventHandler<TestEvent> {
+    class ThirdPartyHandler implements EventHandler<TestEvent> {
       handle(event: TestEvent): void {
         thirdPartyHandlerSpy(event);
       }
@@ -189,13 +189,13 @@ describe('EventBus', () => {
     const expectedHandlerSpy1 = vi.fn();
     const expectedHandlerSpy2 = vi.fn();
 
-    class ExpectedHandler1 implements IEventHandler<TestEvent> {
+    class ExpectedHandler1 implements EventHandler<TestEvent> {
       handle(event: TestEvent): void {
         expectedHandlerSpy1(event);
       }
     }
 
-    class ExpectedHandler2 implements IEventHandler<TestEvent> {
+    class ExpectedHandler2 implements EventHandler<TestEvent> {
       handle(event: TestEvent): void {
         expectedHandlerSpy2(event);
       }
@@ -216,13 +216,13 @@ describe('EventBus', () => {
     const expectedHandlerSpy1 = vi.fn();
     const expectedHandlerSpy2 = vi.fn();
 
-    class ExpectedHandler1 implements IEventHandler<TestEvent> {
+    class ExpectedHandler1 implements EventHandler<TestEvent> {
       handle(event: TestEvent): void {
         expectedHandlerSpy1(event);
       }
     }
 
-    class ExpectedHandler2 implements IEventHandler<TestEvent> {
+    class ExpectedHandler2 implements EventHandler<TestEvent> {
       handle(event: TestEvent): void {
         expectedHandlerSpy2(event);
       }

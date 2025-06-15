@@ -36,17 +36,17 @@ bun add @event-driven-architecture/core
 
 ### Creating Events
 
-First, define your events by implementing the `IEvent` interface:
+First, define your events by implementing the `Event` interface:
 
 ```typescript
-import { IEvent } from '@event-driven-architecture/core';
+import { Event } from '@event-driven-architecture/core';
 
-interface IUserCreatedEventPayload {
+interface UserCreatedEventPayload {
   userId: string;
 }
 
-export class UserCreatedEvent implements IEvent<IUserCreatedEventPayload> {
-  constructor(public readonly payload: IUserCreatedEventPayload) {}
+export class UserCreatedEvent implements Event<UserCreatedEventPayload> {
+  constructor(public readonly payload: UserCreatedEventPayload) {}
 }
 ```
 
@@ -55,11 +55,11 @@ export class UserCreatedEvent implements IEvent<IUserCreatedEventPayload> {
 Next, create handlers for your events:
 
 ```typescript
-import { IEventHandler } from '@event-driven-architecture/core';
+import { EventHandler } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
 
-export class UserCreatedEventHandler implements IEventHandler<UserCreatedEvent> {
+export class UserCreatedEventHandler implements EventHandler<UserCreatedEvent> {
   handle(event: UserCreatedEvent): void {
     const { userId } = event.payload;
     // Handle the event
@@ -70,7 +70,7 @@ export class UserCreatedEventHandler implements IEventHandler<UserCreatedEvent> 
 
 ### Handler Registration
 
-Handlers are registered through an implementation of `IHandlerRegister`. A handler is uniquely identified by two things:
+Handlers are registered through an implementation of `HandlerRegister`. A handler is uniquely identified by two things:
 
 1. The event class it listens for.
 2. Optional **routing metadata** – a free-form object that lets you differentiate handlers listening to the _same_ event class.
@@ -92,15 +92,15 @@ handlerRegister.addScopedHandler(
 
 ### Publishing Events
 
-To publish events, use the `IEventBus`:
+To publish events, use the `EventBus`:
 
 ```typescript
-import { IEventBus } from '@event-driven-architecture/core';
+import { EventBus } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
 
 class UserService {
-  constructor(private readonly eventBus: IEventBus) {}
+  constructor(private readonly eventBus: EventBus) {}
 
   createUser(userId: string): void {
     // Business logic...
@@ -116,13 +116,13 @@ class UserService {
 To use external message brokers, you need to set up a publisher:
 
 ```typescript
-import { IEventBus } from '@event-driven-architecture/core';
+import { EventBus } from '@event-driven-architecture/core';
 
 import { MyCustomPublisher } from './my-custom-publisher';
 
 class AppBootstrap {
   constructor(
-    private readonly eventBus: IEventBus,
+    private readonly eventBus: EventBus,
     private readonly customPublisher: MyCustomPublisher,
   ) {}
 
@@ -160,31 +160,31 @@ await eventBus.synchronouslyConsumeByStrictlySingleHandler(new UserCreatedEvent(
 
 The event-driven module provides several key definitions:
 
-**Event (IEvent)** - Base interface for all events. Events are simple data structures that contain information about what happened in your application.
+**Event (Event)** - Base interface for all events. Events are simple data structures that contain information about what happened in your application.
 
-**Event Handler (IEventHandler)** - Interface for event handlers. Handlers contain the business logic that should be executed when a specific event occurs.
+**Event Handler (EventHandler)** - Interface for event handlers. Handlers contain the business logic that should be executed when a specific event occurs.
 
-**Event Bus (IEventBus)** - Core interface for the event bus. The event bus is responsible for publishing events and routing them to the appropriate handlers.
+**Event Bus (EventBus)** - Core interface for the event bus. The event bus is responsible for publishing events and routing them to the appropriate handlers.
 
-**Event Publisher (IEventPublisher)** - Interface for publishing events to external systems. Publishers are responsible for sending events to external message brokers or other systems.
+**Event Publisher (EventPublisher)** - Interface for publishing events to external systems. Publishers are responsible for sending events to external message brokers or other systems.
 
-**Handler Register (IHandlerRegister)** - Interface for the handler register service. Responsible for registering handlers and retrieving handler signatures.
+**Handler Register (HandlerRegister)** - Interface for the handler register service. Responsible for registering handlers and retrieving handler signatures.
 
 ## Scoped Handlers with Context
 
 You can create scoped handlers that receive context information:
 
 ```typescript
-import { EventHandlerScope, IEventHandler } from '@event-driven-architecture/core';
+import { EventHandler, EventHandlerScope } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
 
-interface IEventContext {
+interface EventContext {
   requestId: string;
 }
 
-export class ScopedUserCreatedEventHandler implements IEventHandler<UserCreatedEvent, IEventContext> {
-  handle(event: UserCreatedEvent, context: IEventContext): void {
+export class ScopedUserCreatedEventHandler implements EventHandler<UserCreatedEvent, EventContext> {
+  handle(event: UserCreatedEvent, context: EventContext): void {
     // Access request context
     console.log('Request context:', context);
 
@@ -210,37 +210,37 @@ The snippet below mirrors the setup used in the test suite and shows how the mai
 ```typescript
 import {
   BaseHandlerRegister,
+  Event,
   EventBus,
-  IEvent,
-  IEventBus,
-  IEventHandler,
-  IEventPublisher,
-  IHandlerRegister,
+  EventBus as EventBusInterface,
+  EventHandler,
+  EventPublisher,
+  HandlerRegister,
 } from '@event-driven-architecture/core';
 
 // 1. Define an event
-export class UserCreatedEvent implements IEvent<{ userId: string }> {
+export class UserCreatedEvent implements Event<{ userId: string }> {
   constructor(public readonly payload: { userId: string }) {}
 }
 
 // 2. Implement a handler
-class UserCreatedHandler implements IEventHandler<UserCreatedEvent> {
+class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
   handle(event: UserCreatedEvent): void {
     console.log('User created (v=1):', event.payload.userId);
   }
 }
 
 // 3. Optional: implement a publisher (here we stub it)
-const inMemoryPublisher: IEventPublisher = {
+const inMemoryPublisher: EventPublisher = {
   publish: (event) => console.log('Published', event),
   publishAll: (events) => console.log('Published many', events),
 };
 
 // 4. Wire everything together
-const register: IHandlerRegister = new BaseHandlerRegister();
+const register: HandlerRegister = new BaseHandlerRegister();
 register.addHandler({ event: UserCreatedEvent, routingMetadata: { v: 1 } }, new UserCreatedHandler());
 
-const eventBus: IEventBus = new EventBus(register);
+const eventBus: EventBusInterface = new EventBus(register);
 eventBus.publisher = inMemoryPublisher;
 
 // 5. Emit and consume an event

@@ -1,2 +1,2 @@
 export * from './base-handlers-register.service';
-export * from './event-bus';
+export * from './base-event-bus';

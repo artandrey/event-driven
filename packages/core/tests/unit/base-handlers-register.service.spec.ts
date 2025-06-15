@@ -1,4 +1,4 @@
-import { BaseHandlerRegister, IEvent, IHandlerRegister } from 'packages/core/lib';
+import { BaseHandlerRegister, Event, HandlerRegister } from 'packages/core/lib';
 
 class TestHandler {
   handle(): Promise<void> {
@@ -6,7 +6,7 @@ class TestHandler {
   }
 }
 
-class TestEvent implements IEvent<object> {
+class TestEvent implements Event<object> {
   payload: Readonly<object>;
 }
 
@@ -19,7 +19,7 @@ const createHandlerWithFixedName = () => {
 };
 
 describe('BaseHandlersRegisterService', () => {
-  let service: IHandlerRegister;
+  let service: HandlerRegister;
 
   beforeEach(() => {
     service = new BaseHandlerRegister();

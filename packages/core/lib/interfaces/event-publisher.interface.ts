@@ -1,6 +1,6 @@
-import { IEvent } from './event.interface';
+import { Event } from './event.interface';
 
-export interface IEventPublisher<TEvent extends IEvent = IEvent> {
+export interface EventPublisher<TEvent extends Event = Event> {
   /**
    * Publishes an event.
    * @param event The event to be published
