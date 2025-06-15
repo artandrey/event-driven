@@ -10,7 +10,7 @@
 
 ### Minor Changes
 
-- 5ac313c: Changeset summary (plain-language focus):
+- 5ac313c: Changeset summary:
 
   Package: @event-driven-architecture/core
   Release type: major
