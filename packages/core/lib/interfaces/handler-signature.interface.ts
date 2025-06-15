@@ -1,6 +1,6 @@
 import { EventSignature } from './event-handler.interface';
 
-export interface IEventHandlerSignature {
+export interface EventHandlerSignature {
   event: EventSignature;
   routingMetadata?: unknown;
 }

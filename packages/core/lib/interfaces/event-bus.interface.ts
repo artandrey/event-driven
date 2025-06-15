@@ -1,7 +1,7 @@
-import { IEvent } from './event.interface';
-import { IHandlerCallOptions } from './handler-call-options.interface';
+import { Event } from './event.interface';
+import { HandlerCallOptions } from './handler-call-options.interface';
 
-export interface IEventBus<TEvent extends IEvent = IEvent> {
+export interface EventBus<TEvent extends Event = Event> {
   /**
    * Publishes an event.
    * @param event The event to be published
@@ -22,7 +22,7 @@ export interface IEventBus<TEvent extends IEvent = IEvent> {
    * @throws Error when more than one handler is found for the event
    * @returns Promise that resolves when the event is handled
    */
-  synchronouslyConsumeByStrictlySingleHandler(event: TEvent, options?: IHandlerCallOptions): Promise<void>;
+  synchronouslyConsumeByStrictlySingleHandler(event: TEvent, options?: HandlerCallOptions): Promise<void>;
   /**
    * Consumes an event by multiple handlers. If there are no handlers available for the event type,
    * an error will be thrown.
@@ -31,5 +31,5 @@ export interface IEventBus<TEvent extends IEvent = IEvent> {
    * @throws Error when no handlers are found for the event
    * @returns Promise that resolves when all handlers are executed
    */
-  synchronouslyConsumeByMultipleHandlers(event: TEvent, options?: IHandlerCallOptions): Promise<void>;
+  synchronouslyConsumeByMultipleHandlers(event: TEvent, options?: HandlerCallOptions): Promise<void>;
 }
