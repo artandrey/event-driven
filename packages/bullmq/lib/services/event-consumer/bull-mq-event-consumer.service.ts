@@ -4,7 +4,10 @@ import { FlowJob, Job, Processor, WorkerOptions } from 'bullmq';
 import { BullMqFlowEvent } from '../../events';
 import { BullMqEvent } from '../../events/bull-mq.event';
 import { BullMqHandlerContext } from '../../interfaces/bull-mq-handler-context.interface';
-import { isBullMqEventRoutingMetadata } from '../../util/map-bull-mq-event-to-routing-metadata';
+import {
+  isBullMqEventRoutingMetadata,
+  mapBullMqEventToRoutingMetadata,
+} from '../../util/map-bull-mq-event-to-routing-metadata';
 import { EventsRegisterService } from '../register/events-register.service';
 import { QueueRegisterService } from '../register/queue-register.service';
 import { WorkerRegisterService } from '../register/workers-register.service';
@@ -41,8 +44,9 @@ export class BullMqEventConsumerService {
 
   private handleJob: Processor = async (job: Job, token?: string) => {
     const event = this.mapJobToEvent(job);
-    this.eventBus.synchronouslyConsumeByStrictlySingleHandler(event, {
+    await this.eventBus.synchronouslyConsumeByStrictlySingleHandler(event, {
       context: this.createBullMqHandlerContext(job, token),
+      routingMetadata: mapBullMqEventToRoutingMetadata(event),
     });
   };
 
