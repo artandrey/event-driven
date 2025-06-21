@@ -1,6 +1,7 @@
 import { BaseHandlerRegister, EventHandler, HandlerRegister } from '@event-driven-architecture/core';
 import { BullMqEvent } from 'packages/bullmq/lib/events/bull-mq.event';
 import { HandlesBullMq } from 'packages/bullmq/lib/util';
+import { mapBullMqEventToRoutingMetadata } from 'packages/bullmq/lib/util/map-bull-mq-event-to-routing-metadata';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BullMqEventConsumerService } from '../../../lib/services/event-consumer/bull-mq-event-consumer.service';
@@ -108,7 +109,12 @@ describe('BullMqEventConsumerService', () => {
 
       expect(eventArg).toEqual(new TestEvent(dummyPayload));
 
-      expect(optionsArg).toEqual({ context: { job, worker: 'workerMock', queue: 'queueMock', token: 'token123' } });
+      expect(optionsArg).toMatchObject({
+        context: { job, worker: 'workerMock', queue: 'queueMock', token: 'token123' },
+      });
+      expect(optionsArg).toMatchObject({
+        routingMetadata: mapBullMqEventToRoutingMetadata(new TestEvent(dummyPayload)),
+      });
     });
 
     it('should throw an error if event type is not found', async () => {
