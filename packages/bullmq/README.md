@@ -71,11 +71,11 @@ export class UserCreatedEvent extends BullMqEvent<{ userId: string }> {
 Handlers are completely decoupled from BullMQ. They only depend on the event type and its payload:
 
 ```typescript
-import { IEventHandler } from '@event-driven-architecture/core';
+import { EventHandler } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
 
-export class UserCreatedHandler implements IEventHandler<UserCreatedEvent> {
+export class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
   handle(event: UserCreatedEvent) {
     // Business logic, unaware of MQ details
     console.log('User created:', event.payload.userId);
@@ -166,7 +166,7 @@ import {
   WorkerRegisterService,
   WorkerService,
 } from '@event-driven-architecture/bullmq';
-import { IEventBus } from '@event-driven-architecture/core';
+import { EventBus } from '@event-driven-architecture/core';
 import { Queue } from 'bullmq';
 
 const workerRegisterService = new WorkerRegisterService();
@@ -207,11 +207,11 @@ When an event is consumed, your handler can receive additional context (such as 
 
 ```typescript
 import { BullMqHandlerContext } from '@event-driven-architecture/bullmq';
-import { IEventHandler } from '@event-driven-architecture/core';
+import { EventHandler } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
 
-export class UserCreatedHandler implements IEventHandler<UserCreatedEvent, BullMqHandlerContext> {
+export class UserCreatedHandler implements EventHandler<UserCreatedEvent, BullMqHandlerContext> {
   handle(event: UserCreatedEvent, context: BullMqHandlerContext) {
     console.log('Job ID:', context.job.id);
     // ...
@@ -326,11 +326,11 @@ This design ensures that handlers remain event-agnostic and only deal with the e
 
 ```typescript
 import { BullMqHandlerContext } from '@event-driven-architecture/bullmq';
-import { IEventHandler } from '@event-driven-architecture/core';
+import { EventHandler } from '@event-driven-architecture/core';
 
 import { FlowEvent } from './events/flow-event';
 
-export class FlowEventHandler implements IEventHandler<FlowEvent, BullMqHandlerContext> {
+export class FlowEventHandler implements EventHandler<FlowEvent, BullMqHandlerContext> {
   async handle(event: FlowEvent, context: BullMqHandlerContext) {}
 }
 ```
