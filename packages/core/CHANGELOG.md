@@ -1,5 +1,11 @@
 # @event-driven-architecture/core
 
+## 0.4.1
+
+### Patch Changes
+
+- 0d8a564: Update docs: fix imports in code snippet
+
 ## 0.4.0
 
 ### Minor Changes
