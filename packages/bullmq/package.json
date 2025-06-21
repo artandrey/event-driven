@@ -20,7 +20,7 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "devDependencies": {
-    "@event-driven-architecture/core": "^0.4.1",
+    "@event-driven-architecture/core": "workspace:^",
     "@testcontainers/redis": "^10.24.2",
     "bullmq": "^5.48.1",
     "testcontainers": "^10.24.2"

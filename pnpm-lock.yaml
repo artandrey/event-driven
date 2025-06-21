@@ -63,8 +63,8 @@ importers:
   packages/bullmq:
     devDependencies:
       '@event-driven-architecture/core':
-        specifier: ^0.4.0
-        version: 0.4.0
+        specifier: workspace:^
+        version: link:../core
       '@testcontainers/redis':
         specifier: ^10.24.2
         version: 10.24.2
@@ -517,9 +517,6 @@ packages:
   '@eslint/plugin-kit@0.3.1':
     resolution: {integrity: sha512-0J+zgWxHN+xXONWIyPWKFMgVuJoZuGiIFu8yxk7RJjxkzpGmyja5wRFqZIVtjDVOQpV+Rw0iOAjYPE2eQyjr0w==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
-  '@event-driven-architecture/core@0.4.0':
-    resolution: {integrity: sha512-9rJ/BokUlp6JP20Z9Qs424SgZdVxushWyvFrDJe8dP6Bk0i1dvZhkeMMz0Q3QpmWP1vSNFZjUGMSVPQrkXobPg==}
 
   '@fastify/busboy@2.1.1':
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
@@ -3051,8 +3048,6 @@ snapshots:
     dependencies:
       '@eslint/core': 0.14.0
       levn: 0.4.1
-
-  '@event-driven-architecture/core@0.4.0': {}
 
   '@fastify/busboy@2.1.1': {}
 
