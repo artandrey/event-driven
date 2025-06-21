@@ -22,7 +22,7 @@ import { HandlesBullMq } from 'packages/bullmq/lib/util';
 import { StartedTestContainer } from 'testcontainers';
 import { ConnectionOptions } from 'tls';
 
-describe.only.each([
+describe.each([
   {
     publisher: AtomicBullMqEventPublisher,
   },
