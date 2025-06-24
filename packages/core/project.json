@@ -1,0 +1,15 @@
+{
+  "name": "core",
+  "targets": {
+    "build": {
+      "executor": "@nx/rollup:rollup",
+      "options": {
+        "main": "./lib/index.ts",
+        "format": ["esm", "cjs"],
+        "generateExportsField": true,
+        "tsConfig": "./tsconfig.lib.json",
+        "outputPath": "packages/core/dist"
+      }
+    }
+  }
+}
