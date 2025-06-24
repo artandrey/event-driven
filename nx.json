@@ -4,5 +4,13 @@
     "build": {
       "dependsOn": ["^build"]
     }
-  }
+  },
+  "plugins": [
+    {
+      "plugin": "@nx/vite/plugin",
+      "options": {
+        "testTargetName": "test"
+      }
+    }
+  ]
 }
