@@ -1,4 +1,4 @@
-import { Event } from '@event-driven-architecture/core';
+import type { Event } from '@event-driven-architecture/core';
 import { JobsOptions } from 'bullmq';
 
 export interface BullMqEventOptions<TPayload extends object = object> {

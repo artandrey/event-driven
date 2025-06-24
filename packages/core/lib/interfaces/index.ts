@@ -6,10 +6,6 @@ export type {
   HandlerRetrievalOptions as HandlerRetrievalOptions,
 } from './handler-register.interface';
 export type { EventHandlerSignature as EventHandlerSignature } from './handler-signature.interface';
-export {
-  EventHandlerScope,
-  EventOption,
-  EventSignature,
-  EventHandler as EventHandler,
-} from './event-handler.interface';
+export { EventHandlerScope } from './event-handler.interface';
+export type { EventOption, EventSignature, EventHandler as EventHandler } from './event-handler.interface';
 export type { Type } from './type.interface';
