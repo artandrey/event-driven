@@ -1,18 +1,18 @@
 import { FlowProducer } from 'bullmq';
 
 export class FlowRegisterService {
-  private singleton: FlowProducer | null = null;
+  private default: FlowProducer | null = null;
   private named: Map<string, FlowProducer> = new Map();
 
-  public addSingleton(flow: FlowProducer) {
-    this.singleton = flow;
+  public setDefault(flow: FlowProducer) {
+    this.default = flow;
   }
 
-  public getSingleton(): FlowProducer {
-    if (!this.singleton) {
+  public getDefault(): FlowProducer {
+    if (!this.default) {
       throw new Error('Singleton FlowProducer not registered');
     }
-    return this.singleton;
+    return this.default;
   }
 
   public addNamed(name: string, flow: FlowProducer) {

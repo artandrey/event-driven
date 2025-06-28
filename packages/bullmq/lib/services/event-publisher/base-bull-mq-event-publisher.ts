@@ -70,7 +70,7 @@ export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqE
     if (event.$flowName) {
       return this.flowRegisterService.getNamed(event.$flowName);
     } else {
-      return this.flowRegisterService.getSingleton();
+      return this.flowRegisterService.getDefault();
     }
   }
 
