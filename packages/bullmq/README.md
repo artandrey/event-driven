@@ -18,6 +18,7 @@ This package provides BullMQ integration for the [@event-driven-architecture/cor
 - [Fanout Routing](#fanout-routing)
   - [Defining Fanout Events](#defining-fanout-events)
   - [Configuring the Fanout Router](#configuring-the-fanout-router)
+    - [Per-Queue Job Options](#per-queue-job-options)
   - [Publishing Fanout Events](#publishing-fanout-events)
   - [Consuming Fanout Events](#consuming-fanout-events)
 - [Consuming Events](#consuming-events)
@@ -211,13 +212,13 @@ const fanoutRouter = new FanoutRouter({
     {
       event: NotificationEvent,
       route: {
-        queues: ['email-queue', 'sms-queue', 'push-queue'],
+        queues: [{ name: 'email-queue' }, { name: 'sms-queue' }, { name: 'push-queue' }],
       },
     },
     {
       event: UserActivityEvent,
       route: {
-        queues: ['analytics-queue', 'audit-queue'],
+        queues: [{ name: 'analytics-queue' }, { name: 'audit-queue' }],
       },
     },
   ],
@@ -233,12 +234,58 @@ const fanoutRouter = new FanoutRouter();
 
 // Add routes for different events
 fanoutRouter.addRoute(NotificationEvent, {
-  queues: ['email-queue', 'sms-queue', 'push-queue'],
+  queues: [{ name: 'email-queue' }, { name: 'sms-queue' }, { name: 'push-queue' }],
 });
 
 fanoutRouter.addRoute(UserActivityEvent, {
-  queues: ['analytics-queue', 'audit-queue'],
+  queues: [{ name: 'analytics-queue' }, { name: 'audit-queue' }],
 });
+```
+
+#### Per-Queue Job Options
+
+You can configure different job options for each queue in a fanout route. This allows you to customize retry attempts, delays, priorities, and other BullMQ job options per destination queue.
+
+```typescript
+import { FanoutRouter } from '@event-driven-architecture/bullmq';
+
+const fanoutRouter = new FanoutRouter();
+
+fanoutRouter.addRoute(NotificationEvent, {
+  queues: [
+    {
+      name: 'email-queue',
+      jobOptions: { attempts: 5, delay: 2000 },
+      jobOptionsStrategy: 'override', // merge with event's options
+    },
+    {
+      name: 'sms-queue',
+      jobOptions: { attempts: 3, priority: 10 },
+      jobOptionsStrategy: 'rewrite', // replace event's options completely
+    },
+    {
+      name: 'push-queue',
+      // No custom options - uses event's default options
+    },
+  ],
+});
+```
+
+**Job Options Strategies:**
+
+- **`override`**: Merges the event's job options with the per-queue options. Per-queue options take precedence for conflicting properties.
+- **`rewrite`**: Completely replaces the event's job options with the per-queue options.
+
+**Example with different strategies:**
+
+```typescript
+// Event has: { attempts: 3, delay: 1000, priority: 1 }
+// Queue config: { attempts: 5, priority: 10, jobOptionsStrategy: 'override' }
+// Result: { attempts: 5, delay: 1000, priority: 10 }
+
+// Event has: { attempts: 3, delay: 1000, priority: 1 }
+// Queue config: { attempts: 5, priority: 10, jobOptionsStrategy: 'rewrite' }
+// Result: { attempts: 5, priority: 10 }
 ```
 
 ### Publishing Fanout Events
@@ -252,7 +299,7 @@ import { AtomicBullMqEventPublisher, FanoutRouter } from '@event-driven-architec
 
 const fanoutRouter = new FanoutRouter();
 fanoutRouter.addRoute(NotificationEvent, {
-  queues: ['email-queue', 'sms-queue', 'push-queue'],
+  queues: [{ name: 'email-queue' }, { name: 'sms-queue' }, { name: 'push-queue' }],
 });
 
 const publisher = new AtomicBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);
@@ -274,7 +321,7 @@ import { BulkBullMqEventPublisher, FanoutRouter } from '@event-driven-architectu
 
 const fanoutRouter = new FanoutRouter();
 fanoutRouter.addRoute(NotificationEvent, {
-  queues: ['email-queue', 'sms-queue', 'push-queue'],
+  queues: [{ name: 'email-queue' }, { name: 'sms-queue' }, { name: 'push-queue' }],
 });
 
 const bulkPublisher = new BulkBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);

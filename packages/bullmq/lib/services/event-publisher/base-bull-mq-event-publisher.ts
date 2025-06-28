@@ -1,10 +1,10 @@
 import { EventPublisher } from '@event-driven-architecture/core';
-import { FlowJob, FlowProducer } from 'bullmq';
+import { FlowJob, FlowProducer, JobsOptions } from 'bullmq';
 
 import { BullMqFanoutEvent } from '../../events/bull-mq-fanout.event';
 import { BullMqFlowEvent } from '../../events/bull-mq-flow.event';
 import { BullMqEvent } from '../../events/bull-mq.event';
-import { FanoutRouter } from '../fanout-router/fanout-router';
+import { FanoutQueueRoute, FanoutRouter } from '../fanout-router/fanout-router';
 import { FlowRegisterService, QueueRegisterService } from '../register';
 
 export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqEvent> {
@@ -20,8 +20,9 @@ export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqE
     } else if (event instanceof BullMqFanoutEvent) {
       const route = this.fanoutRouter.getRoute(event.constructor);
       if (route) {
-        route.queues.forEach((queueName) => {
-          this.queueRegisterService.get(queueName).add(event.$name, event._serialize(), event.$jobOptions);
+        route.queues.forEach((queueRoute) => {
+          const jobOptions = this.resolveJobOptions(event, queueRoute);
+          this.queueRegisterService.get(queueRoute.name).add(event.$name, event._serialize(), jobOptions);
         });
       } else {
         throw new Error(`No route found for event: ${event.$name}`);
@@ -32,6 +33,21 @@ export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqE
   }
 
   abstract publishAll<E extends BullMqEvent<object>>(events: E[]): void;
+
+  protected resolveJobOptions(event: BullMqFanoutEvent, queueRoute: FanoutQueueRoute): JobsOptions | undefined {
+    if (!('jobOptions' in queueRoute)) {
+      return event.$jobOptions;
+    }
+
+    if (queueRoute.jobOptionsStrategy === 'rewrite') {
+      return queueRoute.jobOptions;
+    } else {
+      return {
+        ...event.$jobOptions,
+        ...queueRoute.jobOptions,
+      };
+    }
+  }
 
   protected mapFlowEventToFlowJob(event: BullMqFlowEvent<object>): FlowJob {
     return {

@@ -200,9 +200,9 @@ describe('BulkBullMqEventPublisher', () => {
 
       fanoutRouter.getRoute.mockImplementation((eventClass) => {
         if (eventClass === TestEventClass1) {
-          return { queues: ['queue-1', 'queue-2'] };
+          return { queues: [{ name: 'queue-1' }, { name: 'queue-2' }] };
         } else if (eventClass === TestEventClass2) {
-          return { queues: ['queue-2', 'queue-3'] };
+          return { queues: [{ name: 'queue-2' }, { name: 'queue-3' }] };
         }
         return null;
       });
@@ -255,7 +255,7 @@ describe('BulkBullMqEventPublisher', () => {
 
       fanoutRouter.getRoute.mockImplementation((eventClass) => {
         if (eventClass === FanoutEventClass) {
-          return { queues: ['queue-1', 'queue-2'] };
+          return { queues: [{ name: 'queue-1' }, { name: 'queue-2' }] };
         }
         return null;
       });
@@ -276,6 +276,95 @@ describe('BulkBullMqEventPublisher', () => {
       ]);
       expect(queue2Mock.addBulk).toHaveBeenCalledWith([{ name: fanoutName, data: fanoutPayload, opts: fanoutOptions }]);
       expect(flowProducer.addBulk).toHaveBeenCalledWith([flowEventToFlowAddOptions()]);
+    });
+
+    it('should bulk publish fanout events with rewrite job options strategy', () => {
+      const queue1Mock = createQueueMock();
+      const queue2Mock = createQueueMock();
+      const eventJobOptions = { attempts: 3, delay: 1000 };
+      const queue1CustomOptions = { attempts: 5, priority: 10 };
+      const queue2CustomOptions = { attempts: 2, backoff: { type: 'fixed', delay: 5000 } };
+
+      const {
+        instance: testEvent,
+        class: TestEventClass,
+        name,
+        payload,
+      } = createFanoutEvent('test-fanout-event', { test: 'fanout-test' }, eventJobOptions);
+
+      fanoutRouter.getRoute.mockReturnValue({
+        queues: [
+          { name: 'queue-1', jobOptions: queue1CustomOptions, jobOptionsStrategy: 'rewrite' },
+          { name: 'queue-2', jobOptions: queue2CustomOptions, jobOptionsStrategy: 'rewrite' },
+        ],
+      });
+
+      queueRegisterService.get.mockImplementation((queueName) => {
+        if (queueName === 'queue-1') return queue1Mock;
+        if (queueName === 'queue-2') return queue2Mock;
+        throw new Error(`Unexpected queue name: ${queueName}`);
+      });
+
+      eventPublisher.publishAll([testEvent]);
+
+      expect(fanoutRouter.getRoute).toHaveBeenCalledWith(TestEventClass);
+      expect(queue1Mock.addBulk).toHaveBeenCalledWith([{ name, data: payload, opts: queue1CustomOptions }]);
+      expect(queue2Mock.addBulk).toHaveBeenCalledWith([{ name, data: payload, opts: queue2CustomOptions }]);
+    });
+
+    it('should bulk publish fanout events with override job options strategy', () => {
+      const queue1Mock = createQueueMock();
+      const queue2Mock = createQueueMock();
+      const eventJobOptions = { attempts: 3, delay: 1000, priority: 1 };
+      const queue1CustomOptions = { attempts: 5, priority: 10 };
+      const queue2CustomOptions = { delay: 5000, backoff: { type: 'fixed', delay: 2000 } };
+
+      const {
+        instance: testEvent,
+        class: TestEventClass,
+        name,
+        payload,
+      } = createFanoutEvent('test-fanout-event', { test: 'fanout-test' }, eventJobOptions);
+
+      fanoutRouter.getRoute.mockReturnValue({
+        queues: [
+          { name: 'queue-1', jobOptions: queue1CustomOptions, jobOptionsStrategy: 'override' },
+          { name: 'queue-2', jobOptions: queue2CustomOptions, jobOptionsStrategy: 'override' },
+        ],
+      });
+
+      queueRegisterService.get.mockImplementation((queueName) => {
+        if (queueName === 'queue-1') return queue1Mock;
+        if (queueName === 'queue-2') return queue2Mock;
+        throw new Error(`Unexpected queue name: ${queueName}`);
+      });
+
+      eventPublisher.publishAll([testEvent]);
+
+      expect(fanoutRouter.getRoute).toHaveBeenCalledWith(TestEventClass);
+      expect(queue1Mock.addBulk).toHaveBeenCalledWith([
+        {
+          name,
+          data: payload,
+          opts: {
+            attempts: 5, // overridden
+            delay: 1000, // from event
+            priority: 10, // overridden
+          },
+        },
+      ]);
+      expect(queue2Mock.addBulk).toHaveBeenCalledWith([
+        {
+          name,
+          data: payload,
+          opts: {
+            attempts: 3, // from event
+            delay: 5000, // overridden
+            priority: 1, // from event
+            backoff: { type: 'fixed', delay: 2000 }, // overridden
+          },
+        },
+      ]);
     });
   });
 });

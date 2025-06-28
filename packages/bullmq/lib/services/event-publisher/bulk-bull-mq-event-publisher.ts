@@ -88,17 +88,18 @@ export class BulkBullMqEventPublisher extends BaseBullMQEventPublisher {
         throw new Error(`No route found for fanout event: ${event.$name}`);
       }
 
-      route.queues.forEach((queueName) => {
+      route.queues.forEach((queueRoute) => {
+        const jobOptions = this.resolveJobOptions(event, queueRoute);
         const publishable = {
           name: event.$name,
           data: event._serialize(),
-          opts: event.$jobOptions,
+          opts: jobOptions,
         };
 
-        if (queueQueuePublishableMap.has(queueName)) {
-          queueQueuePublishableMap.get(queueName)?.push(publishable);
+        if (queueQueuePublishableMap.has(queueRoute.name)) {
+          queueQueuePublishableMap.get(queueRoute.name)?.push(publishable);
         } else {
-          queueQueuePublishableMap.set(queueName, [publishable]);
+          queueQueuePublishableMap.set(queueRoute.name, [publishable]);
         }
       });
     });

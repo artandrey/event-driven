@@ -1,4 +1,5 @@
 import { Type } from '@event-driven-architecture/core';
+import { JobsOptions } from 'bullmq';
 
 import { BullMqFanoutEvent } from '../../events';
 
@@ -7,8 +8,21 @@ export interface FanoutRouteDefinition {
   route: FanoutRoute;
 }
 
+export type FanoutJobOptionsStrategy = 'rewrite' | 'override';
+
+export interface FanoutQueueRouteBase {
+  name: string;
+}
+
+export interface FanoutQueueRouteWithOptions extends FanoutQueueRouteBase {
+  jobOptions: JobsOptions;
+  jobOptionsStrategy: FanoutJobOptionsStrategy;
+}
+
+export type FanoutQueueRoute = FanoutQueueRouteBase | FanoutQueueRouteWithOptions;
+
 export interface FanoutRoute {
-  readonly queues: readonly string[];
+  readonly queues: readonly FanoutQueueRoute[];
 }
 
 export interface FanoutOptions {
