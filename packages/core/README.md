@@ -209,10 +209,10 @@ The snippet below mirrors the setup used in the test suite and shows how the mai
 
 ```typescript
 import {
+  BaseEventBus,
   BaseHandlerRegister,
   Event,
   EventBus,
-  EventBus as EventBusInterface,
   EventHandler,
   EventPublisher,
   HandlerRegister,
@@ -240,7 +240,7 @@ const inMemoryPublisher: EventPublisher = {
 const register: HandlerRegister = new BaseHandlerRegister();
 register.addHandler({ event: UserCreatedEvent, routingMetadata: { v: 1 } }, new UserCreatedHandler());
 
-const eventBus: EventBusInterface = new EventBus(register);
+const eventBus = new BaseEventBus(register);
 eventBus.publisher = inMemoryPublisher;
 
 // 5. Emit and consume an event

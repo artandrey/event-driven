@@ -6,18 +6,18 @@ import { HandlerCallOptions } from '../interfaces/handler-call-options.interface
 export type EventHandlerType<TEvent extends Event = Event> = Type<EventHandler<TEvent>>;
 
 export class BaseEventBus<TEvent extends Event = Event> implements EventBus<TEvent> {
-  protected _pubsub: EventPublisher | null = null;
+  protected _pubsub: EventPublisher<TEvent> | null = null;
 
   constructor(private readonly handlersRegister: HandlerRegister<EventHandler<TEvent>>) {}
 
-  get publisher(): EventPublisher {
+  get publisher(): EventPublisher<TEvent> {
     if (!this._pubsub) {
       throw new PublisherNotSetException();
     }
     return this._pubsub;
   }
 
-  set publisher(_publisher: EventPublisher) {
+  set publisher(_publisher: EventPublisher<TEvent>) {
     this._pubsub = _publisher;
   }
 

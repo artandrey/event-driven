@@ -1,5 +1,15 @@
 # @event-driven-architecture/bullmq
 
+## 0.2.1
+
+### Patch Changes
+
+- 1c39df5: Update docs to match updated imports from core
+- a098df3: Fix event consumption
+- ebbd5cb: Specify generic type for EventPublisher for BaseEventBus declaration
+- Updated dependencies [0d8a564]
+  - @event-driven-architecture/core@0.4.1
+
 ## 0.2.0
 
 ### Minor Changes

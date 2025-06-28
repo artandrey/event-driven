@@ -5,7 +5,14 @@ import tseslint from 'typescript-eslint';
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   {
-    ignores: ['**/dist/**', 'tsup.config.ts', 'vitest.config.mts', 'vitest.config.e2e.mts'],
+    ignores: [
+      '**/dist/**',
+      'tsup.config.ts',
+      'vitest.config.mts',
+      'vitest.config.e2e.mts',
+      '**/vite.config.*.timestamp*',
+      '**/vitest.config.*.timestamp*',
+    ],
   },
   { files: ['**/*.{js,mjs,cjs,ts}'] },
   { languageOptions: { globals: globals.browser } },
