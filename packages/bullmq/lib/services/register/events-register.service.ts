@@ -1,6 +1,7 @@
 import { Type } from '@event-driven-architecture/core';
 
 import { BullMqEvent } from '../../events/bull-mq.event';
+import { EventTypeNotFoundException } from '../../exceptions';
 
 export interface BullMqEventKey {
   queueName: string;
@@ -23,7 +24,7 @@ export class EventsRegisterService {
   getType(key: BullMqEventKey): Type<BullMqEvent> {
     const type = this.keyClassTypeMap.get(this.serializeKey(key));
     if (!type) {
-      throw new Error(`Event type not found for name: ${key.name} and queue: ${key.queueName}`);
+      throw new EventTypeNotFoundException(key.name, key.queueName);
     }
     return type;
   }
