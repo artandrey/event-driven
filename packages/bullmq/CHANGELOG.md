@@ -1,5 +1,17 @@
 # @event-driven-architecture/bullmq
 
+## 0.3.0
+
+### Minor Changes
+
+- 024a4a3: Rename singleton flow producer to default in FlowRegisterService
+- c2f9915: Add ability to rewrite or override job options for each queue in fanout
+- 0de6046: Implement fanout routing
+
+### Patch Changes
+
+- f34d8bd: Define custom exceptions
+
 ## 0.2.1
 
 ### Patch Changes
