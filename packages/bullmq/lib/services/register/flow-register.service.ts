@@ -1,5 +1,7 @@
 import { FlowProducer } from 'bullmq';
 
+import { FlowProducerNotRegisteredException } from '../../exceptions';
+
 export class FlowRegisterService {
   private default: FlowProducer | null = null;
   private named: Map<string, FlowProducer> = new Map();
@@ -10,7 +12,7 @@ export class FlowRegisterService {
 
   public getDefault(): FlowProducer {
     if (!this.default) {
-      throw new Error('Singleton FlowProducer not registered');
+      throw new FlowProducerNotRegisteredException('Default FlowProducer not registered');
     }
     return this.default;
   }
@@ -22,7 +24,7 @@ export class FlowRegisterService {
   public getNamed(name: string): FlowProducer {
     const flow = this.named.get(name);
     if (!flow) {
-      throw new Error(`Named FlowProducer not registered for name: ${name}`);
+      throw new FlowProducerNotRegisteredException(`Named FlowProducer not registered for name: ${name}`);
     }
     return flow;
   }

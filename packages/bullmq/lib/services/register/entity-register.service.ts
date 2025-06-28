@@ -1,3 +1,5 @@
+import { EntityNotFoundException } from '../../exceptions';
+
 export abstract class EntityRegisterService<TEntity, TKey, TSerializedKey = TKey> {
   private readonly keyEntityMap = new Map<TSerializedKey, TEntity>();
 
@@ -14,7 +16,7 @@ export abstract class EntityRegisterService<TEntity, TKey, TSerializedKey = TKey
     const serializedKey = this.serializeKey(key);
     const entity = this.keyEntityMap.get(serializedKey);
     if (!entity) {
-      throw new Error(`Entity not found for key: ${key}`);
+      throw new EntityNotFoundException(key);
     }
     return entity;
   }
