@@ -15,7 +15,7 @@ export interface HandlerRetrievalOptions<E = unknown> {
  * @template T The handler type
  * @template TypeT The handler class type
  */
-export interface HandlerRegister<T = EventHandler<Event>, TypeT extends Type<T> = Type<T>> {
+export interface HandlerRegister<T extends EventHandler<Event> = EventHandler<Event>, TypeT extends Type<T> = Type<T>> {
   /**
    * Adds a handler to the handlers map
    * @param handlerSignature The handler signature to store the handler under

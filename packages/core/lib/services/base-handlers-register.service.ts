@@ -1,4 +1,4 @@
-import { Type } from '../interfaces';
+import { Event, EventHandler, Type } from '../interfaces';
 import { HandlerRegister, HandlerRetrievalOptions } from '../interfaces/handler-register.interface';
 import { EventHandlerSignature } from '../interfaces/handler-signature.interface';
 import { ObjectHashMap } from '../util/object-hash-map';
@@ -8,7 +8,9 @@ export interface HandlerKey {
   routingMetadata: unknown;
 }
 
-export class BaseHandlerRegister<T, TypeT extends Type<T> = Type<T>> implements HandlerRegister<T, TypeT> {
+export class BaseHandlerRegister<T extends EventHandler<Event> = EventHandler<Event>, TypeT extends Type<T> = Type<T>>
+  implements HandlerRegister<T, TypeT>
+{
   private handlers = new ObjectHashMap<HandlerKey, Set<T>>();
   private scopedHandlers = new ObjectHashMap<HandlerKey, Set<TypeT>>();
   private handlersSignatures: EventHandlerSignature[] = [];
