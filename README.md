@@ -11,4 +11,6 @@ A modular, framework-agnostic library for building event-driven architectures in
 
 - [RabbitMQ] - To do
 - [SQS] - To do
+- [PgMQ] - To do
+- [Kafka] - To do (or not to do)
 - [Requested by you] - To do
