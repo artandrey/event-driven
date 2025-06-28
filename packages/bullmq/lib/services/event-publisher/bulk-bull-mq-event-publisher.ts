@@ -1,7 +1,18 @@
+import { JobsOptions } from 'bullmq';
+
+import { BullMqFlowEvent } from '../../events';
+import { BullMqFanoutEvent } from '../../events/bull-mq-fanout.event';
 import { BullMqEvent } from '../../events/bull-mq.event';
+import { FanoutRouter } from '../fanout-router/fanout-router';
 import { FlowRegisterService } from '../register';
 import { QueueRegisterService } from '../register/queue-register.service';
 import { BaseBullMQEventPublisher } from './base-bull-mq-event-publisher';
+
+export interface QueuePublishable {
+  name: string;
+  data: object;
+  opts: JobsOptions | undefined;
+}
 
 /**
  * This implementation utilizes the `addBulk` method of the `Queue` class.
@@ -10,20 +21,90 @@ import { BaseBullMQEventPublisher } from './base-bull-mq-event-publisher';
  * Also, if repeat option is provided in the job options, it will be ignored due to the `addBulk` method behaviour.
  */
 export class BulkBullMqEventPublisher extends BaseBullMQEventPublisher {
-  constructor(queueRegisterService: QueueRegisterService, flowRegisterService: FlowRegisterService) {
-    super(queueRegisterService, flowRegisterService);
+  constructor(
+    queueRegisterService: QueueRegisterService,
+    flowRegisterService: FlowRegisterService,
+    fanoutRouter: FanoutRouter,
+  ) {
+    super(queueRegisterService, flowRegisterService, fanoutRouter);
   }
 
   publishAll<E extends BullMqEvent<object>>(events: E[]): void {
-    const eventQueueNameEventsMap = events.reduce((acc, event) => {
-      acc.set(event.$queueName, [...(acc.get(event.$queueName) || []), event]);
-      return acc;
-    }, new Map<string, E[]>());
+    const eventTypeEventsMap = events.reduce(
+      (acc, event) => {
+        if (event instanceof BullMqFanoutEvent) {
+          acc.fanout.push(event);
+        } else if (event instanceof BullMqFlowEvent) {
+          acc.flow.push(event);
+        } else {
+          acc.queue.push(event);
+        }
+        return acc;
+      },
+      {
+        fanout: [] as BullMqFanoutEvent[],
+        flow: [] as BullMqFlowEvent[],
+        queue: [] as BullMqEvent[],
+      },
+    );
 
-    for (const [queueName, events] of eventQueueNameEventsMap.entries()) {
-      this.queueRegisterService
-        .get(queueName)
-        .addBulk(events.map((event) => ({ name: event.$name, data: event.payload, opts: event.$jobOptions })));
+    this.publishFlowEvents(eventTypeEventsMap.flow);
+    this.publishQueueEvents(eventTypeEventsMap.queue, eventTypeEventsMap.fanout);
+  }
+
+  private publishFlowEvents(events: BullMqFlowEvent[]): void {
+    const eventFlowNameEventsMap = events.reduce((acc, event) => {
+      acc.set(event.$flowName, [...(acc.get(event.$flowName) || []), event]);
+      return acc;
+    }, new Map<string | null, BullMqFlowEvent[]>());
+
+    for (const events of eventFlowNameEventsMap.values()) {
+      const flowProducer = this.getCorrespondFlowProducer(events[0]);
+      flowProducer.addBulk(events.map((event) => this.mapFlowEventToFlowJob(event)));
+    }
+  }
+
+  publishQueueEvents(queueEvents: BullMqEvent<object>[], fanoutEvents: BullMqFanoutEvent<object>[]): void {
+    const queueQueuePublishableMap = new Map<string, QueuePublishable[]>();
+
+    queueEvents.forEach((event) => {
+      const queueName = event.$queueName;
+      const publishable = {
+        name: event.$name,
+        data: event._serialize(),
+        opts: event.$jobOptions,
+      };
+
+      if (queueQueuePublishableMap.has(queueName)) {
+        queueQueuePublishableMap.get(queueName)?.push(publishable);
+      } else {
+        queueQueuePublishableMap.set(queueName, [publishable]);
+      }
+    });
+
+    fanoutEvents.forEach((event) => {
+      const route = this.fanoutRouter.getRoute(event.constructor);
+      if (!route) {
+        throw new Error(`No route found for fanout event: ${event.$name}`);
+      }
+
+      route.queues.forEach((queueName) => {
+        const publishable = {
+          name: event.$name,
+          data: event._serialize(),
+          opts: event.$jobOptions,
+        };
+
+        if (queueQueuePublishableMap.has(queueName)) {
+          queueQueuePublishableMap.get(queueName)?.push(publishable);
+        } else {
+          queueQueuePublishableMap.set(queueName, [publishable]);
+        }
+      });
+    });
+
+    for (const [queueName, publishables] of queueQueuePublishableMap.entries()) {
+      this.queueRegisterService.get(queueName).addBulk(publishables);
     }
   }
 }

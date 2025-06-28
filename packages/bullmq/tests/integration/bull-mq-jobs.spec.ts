@@ -12,6 +12,7 @@ import {
   WorkerService,
 } from 'packages/bullmq/lib';
 import { BullMqEventConsumerService } from 'packages/bullmq/lib/services/event-consumer/bull-mq-event-consumer.service';
+import { FanoutRouter } from 'packages/bullmq/lib/services/fanout-router/fanout-router';
 import { StartedTestContainer } from 'testcontainers';
 import { afterEach, beforeEach, describe, expect } from 'vitest';
 
@@ -31,7 +32,7 @@ describe.each([
   let queueRegisterService: QueueRegisterService;
   let eventsRegisterService: EventsRegisterService;
   let flowRegisterService: FlowRegisterService;
-
+  let fanoutRouter: FanoutRouter;
   const eventBus = {
     publish: vi.fn(),
     publishAll: vi.fn(),
@@ -57,7 +58,7 @@ describe.each([
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
     flowRegisterService = new FlowRegisterService();
-
+    fanoutRouter = new FanoutRouter();
     const CONNECTION: ConnectionOptions = {
       host: redisHost,
       port: redisPort,
@@ -98,7 +99,7 @@ describe.each([
   it('should publish and consume event', async () => {
     eventsRegisterService.register(TestEvent);
 
-    const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
+    const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
     const payload = {
       test: 'test',
@@ -116,7 +117,7 @@ describe.each([
   it('should publish and consume multiple events', async () => {
     eventsRegisterService.register(TestEvent);
 
-    const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
+    const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
     eventPublisher.publishAll([new TestEvent({ test: 'test1' }), new TestEvent({ test: 'test2' })]);
     await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalledTimes(2), {
@@ -137,7 +138,7 @@ describe.each([
   it('should consume event with context', async () => {
     eventsRegisterService.register(TestEvent);
 
-    const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
+    const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
     eventPublisher.publish(new TestEvent({ test: 'test' }));
 

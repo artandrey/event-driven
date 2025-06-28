@@ -15,6 +15,11 @@ This package provides BullMQ integration for the [@event-driven-architecture/cor
 - [Registering Queues and Handlers](#registering-queues-and-handlers)
 - [Publishing Events](#publishing-events)
   - [Atomic vs Bulk Publishing](#atomic-vs-bulk-publishing)
+- [Fanout Routing](#fanout-routing)
+  - [Defining Fanout Events](#defining-fanout-events)
+  - [Configuring the Fanout Router](#configuring-the-fanout-router)
+  - [Publishing Fanout Events](#publishing-fanout-events)
+  - [Consuming Fanout Events](#consuming-fanout-events)
 - [Consuming Events](#consuming-events)
 - [Handler Context](#handler-context)
 - [Testing](#testing)
@@ -133,9 +138,10 @@ You can publish events using either atomic or bulk strategies. Both are event-ag
 #### Example: Atomic Publishing
 
 ```typescript
-import { AtomicBullMqEventPublisher } from '@event-driven-architecture/bullmq';
+import { AtomicBullMqEventPublisher, FanoutRouter } from '@event-driven-architecture/bullmq';
 
-const eventPublisher = new AtomicBullMqEventPublisher(queueRegisterService);
+const fanoutRouter = new FanoutRouter();
+const eventPublisher = new AtomicBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);
 const event = new UserCreatedEvent({ userId: '123' });
 eventPublisher.publish(event);
 ```
@@ -143,10 +149,237 @@ eventPublisher.publish(event);
 #### Example: Bulk Publishing
 
 ```typescript
-import { BulkBullMqEventPublisher } from '@event-driven-architecture/bullmq';
+import { BulkBullMqEventPublisher, FanoutRouter } from '@event-driven-architecture/bullmq';
 
-const bulkPublisher = new BulkBullMqEventPublisher(queueRegisterService);
+const fanoutRouter = new FanoutRouter();
+const bulkPublisher = new BulkBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);
 bulkPublisher.publishAll([new UserCreatedEvent({ userId: '1' }), new UserCreatedEvent({ userId: '2' })]);
+```
+
+---
+
+## Fanout Routing
+
+Fanout routing allows you to publish a single event to multiple queues simultaneously. This is useful for implementing patterns like event broadcasting, where multiple services need to process the same event independently.
+
+### Defining Fanout Events
+
+Fanout events extend `BullMqFanoutEvent` instead of `BullMqEvent`. Unlike regular events, fanout events don't specify a single queue name since they will be routed to multiple queues based on the configured routes.
+
+```typescript
+import { BullMqFanoutEvent } from '@event-driven-architecture/bullmq';
+
+interface NotificationPayload {
+  userId: string;
+  message: string;
+  type: 'email' | 'sms' | 'push';
+}
+
+export class NotificationEvent extends BullMqFanoutEvent<NotificationPayload> {
+  constructor(payload: NotificationPayload) {
+    super({
+      name: 'notification-sent',
+      jobOptions: { attempts: 3, delay: 1000 },
+      payload,
+    });
+  }
+}
+```
+
+When consumed, fanout events provide access to the queue they were actually processed on via the `$assignedQueueName` property:
+
+```typescript
+export class NotificationHandler implements IEventHandler<NotificationEvent, BullMqHandlerContext> {
+  handle(event: NotificationEvent, context: BullMqHandlerContext) {
+    console.log('Processing notification on queue:', event.$assignedQueueName);
+    console.log('Notification payload:', event.payload);
+  }
+}
+```
+
+### Configuring the Fanout Router
+
+The `FanoutRouter` is responsible for mapping fanout events to their target queues. You can configure routes either during construction or by adding them dynamically.
+
+#### Option 1: Configure Routes During Construction
+
+```typescript
+import { FanoutRouter } from '@event-driven-architecture/bullmq';
+
+const fanoutRouter = new FanoutRouter({
+  routes: [
+    {
+      event: NotificationEvent,
+      route: {
+        queues: ['email-queue', 'sms-queue', 'push-queue'],
+      },
+    },
+    {
+      event: UserActivityEvent,
+      route: {
+        queues: ['analytics-queue', 'audit-queue'],
+      },
+    },
+  ],
+});
+```
+
+#### Option 2: Add Routes Dynamically
+
+```typescript
+import { FanoutRouter } from '@event-driven-architecture/bullmq';
+
+const fanoutRouter = new FanoutRouter();
+
+// Add routes for different events
+fanoutRouter.addRoute(NotificationEvent, {
+  queues: ['email-queue', 'sms-queue', 'push-queue'],
+});
+
+fanoutRouter.addRoute(UserActivityEvent, {
+  queues: ['analytics-queue', 'audit-queue'],
+});
+```
+
+### Publishing Fanout Events
+
+Fanout events are published using the same publishers as regular events. The publisher will automatically detect fanout events and route them to all configured queues.
+
+#### Using Atomic Publisher
+
+```typescript
+import { AtomicBullMqEventPublisher, FanoutRouter } from '@event-driven-architecture/bullmq';
+
+const fanoutRouter = new FanoutRouter();
+fanoutRouter.addRoute(NotificationEvent, {
+  queues: ['email-queue', 'sms-queue', 'push-queue'],
+});
+
+const publisher = new AtomicBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);
+
+// This will create jobs in all three queues
+publisher.publish(
+  new NotificationEvent({
+    userId: '123',
+    message: 'Welcome to our platform!',
+    type: 'email',
+  }),
+);
+```
+
+#### Using Bulk Publisher
+
+```typescript
+import { BulkBullMqEventPublisher, FanoutRouter } from '@event-driven-architecture/bullmq';
+
+const fanoutRouter = new FanoutRouter();
+fanoutRouter.addRoute(NotificationEvent, {
+  queues: ['email-queue', 'sms-queue', 'push-queue'],
+});
+
+const bulkPublisher = new BulkBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);
+
+// Efficiently publish multiple fanout events
+bulkPublisher.publishAll([
+  new NotificationEvent({ userId: '1', message: 'Message 1', type: 'email' }),
+  new NotificationEvent({ userId: '2', message: 'Message 2', type: 'sms' }),
+]);
+```
+
+### Consuming Fanout Events
+
+Consuming fanout events requires setting up workers for each target queue, just like regular events. Each queue will process the same event independently.
+
+```typescript
+import {
+  BullMqEventConsumerService,
+  EventsRegisterService,
+  QueueRegisterService,
+  WorkerRegisterService,
+  WorkerService,
+} from '@event-driven-architecture/bullmq';
+import { Queue } from 'bullmq';
+
+// Register all target queues
+const queueRegisterService = new QueueRegisterService();
+const emailQueue = new Queue('email-queue', { connection: { host: 'localhost', port: 6379 } });
+const smsQueue = new Queue('sms-queue', { connection: { host: 'localhost', port: 6379 } });
+const pushQueue = new Queue('push-queue', { connection: { host: 'localhost', port: 6379 } });
+
+queueRegisterService.add(emailQueue);
+queueRegisterService.add(smsQueue);
+queueRegisterService.add(pushQueue);
+
+// Register event and handlers
+const eventsRegisterService = new EventsRegisterService();
+eventsRegisterService.register(NotificationEvent);
+
+const handlerRegisterService = new BaseHandlerRegister();
+handlerRegisterService.addHandler(HandlesBullMq(NotificationEvent), new NotificationHandler());
+
+// Configure consumer for all queues
+const consumerOptions = [
+  {
+    queueName: 'email-queue',
+    workerOptions: { connection: { host: 'localhost', port: 6379 } },
+  },
+  {
+    queueName: 'sms-queue',
+    workerOptions: { connection: { host: 'localhost', port: 6379 } },
+  },
+  {
+    queueName: 'push-queue',
+    workerOptions: { connection: { host: 'localhost', port: 6379 } },
+  },
+];
+
+const consumer = new BullMqEventConsumerService(
+  workerRegisterService,
+  queueRegisterService,
+  eventsRegisterService,
+  consumerOptions,
+  workerService,
+  eventBus,
+  handlerRegisterService,
+);
+
+consumer.init(); // Start consuming from all queues
+```
+
+#### Queue-Specific Handlers
+
+If you need different logic for each queue, you can create queue-specific handlers by checking the `$assignedQueueName` property:
+
+```typescript
+export class NotificationHandler implements IEventHandler<NotificationEvent, BullMqHandlerContext> {
+  handle(event: NotificationEvent, context: BullMqHandlerContext) {
+    switch (event.$assignedQueueName) {
+      case 'email-queue':
+        this.handleEmailNotification(event.payload);
+        break;
+      case 'sms-queue':
+        this.handleSmsNotification(event.payload);
+        break;
+      case 'push-queue':
+        this.handlePushNotification(event.payload);
+        break;
+      default:
+        throw new Error(`Unknown queue: ${event.$assignedQueueName}`);
+    }
+  }
+
+  private handleEmailNotification(payload: NotificationPayload) {
+    // Email-specific logic
+  }
+
+  private handleSmsNotification(payload: NotificationPayload) {
+    // SMS-specific logic
+  }
+
+  private handlePushNotification(payload: NotificationPayload) {
+    // Push notification-specific logic
+  }
+}
 ```
 
 ---
@@ -306,13 +539,14 @@ class MainFlowEvent extends BullMqFlowEvent<FlowEventPayload> {
 To publish a flow event, use a publisher (atomic or bulk) and provide a `FlowRegisterService`:
 
 ```typescript
-import { AtomicBullMqEventPublisher, FlowRegisterService } from '@event-driven-architecture/bullmq';
+import { AtomicBullMqEventPublisher, FanoutRouter, FlowRegisterService } from '@event-driven-architecture/bullmq';
 import { FlowProducer } from 'bullmq';
 
 const flowRegisterService = new FlowRegisterService();
 flowRegisterService.addSingleton(new FlowProducer({ connection: { host: 'localhost', port: 6379 } }));
 
-const publisher = new AtomicBullMqEventPublisher(queueRegisterService, flowRegisterService);
+const fanoutRouter = new FanoutRouter();
+const publisher = new AtomicBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);
 publisher.publish(new FlowEvent({ main: 'main', sub: 'sub' }));
 ```
 

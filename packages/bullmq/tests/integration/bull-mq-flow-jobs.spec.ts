@@ -13,6 +13,7 @@ import {
   WorkerService,
 } from 'packages/bullmq/lib';
 import { BullMqEventConsumerService } from 'packages/bullmq/lib/services/event-consumer/bull-mq-event-consumer.service';
+import { FanoutRouter } from 'packages/bullmq/lib/services/fanout-router/fanout-router';
 import { StartedTestContainer } from 'testcontainers';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -42,6 +43,7 @@ describe.each([
   let queueRegisterService: QueueRegisterService;
   let eventsRegisterService: EventsRegisterService;
   let flowRegisterService: FlowRegisterService;
+  let fanoutRouter: FanoutRouter;
 
   const eventBus = {
     publish: vi.fn(),
@@ -62,7 +64,7 @@ describe.each([
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
     flowRegisterService = new FlowRegisterService();
-
+    fanoutRouter = new FanoutRouter();
     const CONNECTION: ConnectionOptions = {
       host: redisHost,
       port: redisPort,
@@ -155,7 +157,7 @@ describe.each([
       eventsRegisterService.register(TestFlowEvent);
       eventsRegisterService.register(TestSubEvent);
 
-      const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
+      const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
       eventPublisher.publish(new TestFlowEvent(mainPayload, subPayload));
       await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
@@ -224,7 +226,7 @@ describe.each([
       eventsRegisterService.register(TestMainFlowEvent);
       eventsRegisterService.register(TestSubFlowEvent);
 
-      const eventPublisher = new publisher(queueRegisterService, flowRegisterService);
+      const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
       eventPublisher.publish(new TestMainFlowEvent(mainPayload, subPayload));
 

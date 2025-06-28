@@ -1,7 +1,7 @@
 import { EventBus, HandlerRegister, Type } from '@event-driven-architecture/core';
 import { FlowJob, Job, Processor, WorkerOptions } from 'bullmq';
 
-import { BullMqFlowEvent } from '../../events';
+import { BullMqFanoutEvent, BullMqFlowEvent } from '../../events';
 import { BullMqEvent } from '../../events/bull-mq.event';
 import { BullMqHandlerContext } from '../../interfaces/bull-mq-handler-context.interface';
 import { isBullMqEventRoutingMetadata } from '../../util/map-bull-mq-event-to-routing-metadata';
@@ -67,6 +67,10 @@ export class BullMqEventConsumerService {
     if (eventInstance instanceof BullMqFlowEvent) {
       (eventInstance as any)._prefix = (job as FlowJob).prefix;
       (eventInstance as any)._children = null;
+    }
+
+    if (eventInstance instanceof BullMqFanoutEvent) {
+      (eventInstance as any)._assignedQueueName = (job as Job).queueName;
     }
 
     eventInstance._payload = eventInstance._deserialize(job.data);
