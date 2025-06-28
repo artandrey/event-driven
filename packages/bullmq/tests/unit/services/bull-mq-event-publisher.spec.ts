@@ -77,7 +77,7 @@ describe.each([
 
       const flowProducer = createFlowProducerMock();
 
-      flowRegisterService.getSingleton.mockReturnValue(flowProducer);
+      flowRegisterService.getDefault.mockReturnValue(flowProducer);
 
       eventPublisher.publish(testEvent);
 

@@ -590,7 +590,7 @@ import { AtomicBullMqEventPublisher, FanoutRouter, FlowRegisterService } from '@
 import { FlowProducer } from 'bullmq';
 
 const flowRegisterService = new FlowRegisterService();
-flowRegisterService.addSingleton(new FlowProducer({ connection: { host: 'localhost', port: 6379 } }));
+flowRegisterService.setDefault(new FlowProducer({ connection: { host: 'localhost', port: 6379 } }));
 
 const fanoutRouter = new FanoutRouter();
 const publisher = new AtomicBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);

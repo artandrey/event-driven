@@ -98,7 +98,7 @@ describe('BulkBullMqEventPublisher', () => {
         [],
       );
 
-      flowRegisterService.getSingleton.mockReturnValue(flowProducer);
+      flowRegisterService.getDefault.mockReturnValue(flowProducer);
 
       eventPublisher.publishAll([testEvent1, testEvent2]);
 
@@ -266,7 +266,7 @@ describe('BulkBullMqEventPublisher', () => {
         throw new Error(`Unexpected queue name: ${queueName}`);
       });
 
-      flowRegisterService.getSingleton.mockReturnValue(flowProducer);
+      flowRegisterService.getDefault.mockReturnValue(flowProducer);
 
       eventPublisher.publishAll([queueEvent, flowEvent, fanoutEvent]);
 

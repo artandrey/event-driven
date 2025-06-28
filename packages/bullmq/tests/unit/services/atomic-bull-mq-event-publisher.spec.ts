@@ -74,7 +74,7 @@ describe('AtomicBullMqEventPublisher', () => {
         [],
       );
 
-      flowRegisterService.getSingleton.mockReturnValue(flowProducer);
+      flowRegisterService.getDefault.mockReturnValue(flowProducer);
 
       eventPublisher.publishAll([testEvent1, testEvent2]);
 

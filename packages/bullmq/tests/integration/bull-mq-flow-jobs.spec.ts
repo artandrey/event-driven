@@ -76,7 +76,7 @@ describe.each([
     if (flowName) {
       flowRegisterService.addNamed(flowName, new FlowProducer({ connection: CONNECTION }));
     } else {
-      flowRegisterService.addSingleton(new FlowProducer({ connection: CONNECTION }));
+      flowRegisterService.setDefault(new FlowProducer({ connection: CONNECTION }));
     }
 
     const eventConsumer = new BullMqEventConsumerService(
@@ -112,7 +112,7 @@ describe.each([
     if (flowName) {
       await flowRegisterService.getNamed(flowName).close();
     } else {
-      await flowRegisterService.getSingleton().close();
+      await flowRegisterService.getDefault().close();
     }
     if (redisContainer) {
       await redisContainer.stop();

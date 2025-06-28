@@ -3,18 +3,18 @@ import { FlowProducer } from 'bullmq';
 import { FlowProducerNotRegisteredException } from '../../exceptions';
 
 export class FlowRegisterService {
-  private singleton: FlowProducer | null = null;
+  private default: FlowProducer | null = null;
   private named: Map<string, FlowProducer> = new Map();
 
-  public addSingleton(flow: FlowProducer) {
-    this.singleton = flow;
+  public setDefault(flow: FlowProducer) {
+    this.default = flow;
   }
 
-  public getSingleton(): FlowProducer {
-    if (!this.singleton) {
-      throw new FlowProducerNotRegisteredException('Singleton FlowProducer not registered');
+  public getDefault(): FlowProducer {
+    if (!this.default) {
+      throw new FlowProducerNotRegisteredException('Default FlowProducer not registered');
     }
-    return this.singleton;
+    return this.default;
   }
 
   public addNamed(name: string, flow: FlowProducer) {
