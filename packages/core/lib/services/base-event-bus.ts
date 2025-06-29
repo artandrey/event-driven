@@ -1,4 +1,9 @@
-import { HandlerNotFoundException, MultipleHandlersFoundException, PublisherNotSetException } from '../exceptions';
+import {
+  HandlerNotFoundException,
+  MultipleHandlersFailedException,
+  MultipleHandlersFoundException,
+  PublisherNotSetException,
+} from '../exceptions';
 import { defaultGetEventName } from '../helpers/default-get-event-name';
 import { Event, EventBus, EventHandler, EventPublisher, HandlerRegister, Type } from '../interfaces';
 import { HandlerCallOptions } from '../interfaces/handler-call-options.interface';
@@ -51,12 +56,15 @@ export class BaseEventBus<TEvent extends Event = Event> implements EventBus<TEve
     });
 
     if (!handlers || handlers.length === 0) {
-      throw new HandlerNotFoundException();
+      throw new HandlerNotFoundException(this.getEventName(event), options?.routingMetadata);
     }
     if (handlers.length !== 1) {
-      throw new MultipleHandlersFoundException();
+      throw new MultipleHandlersFoundException(this.getEventName(event), options?.routingMetadata, handlers.length);
     }
-    return handlers[0].handle(event);
+    if (options?.context) {
+      return await handlers[0].handle(event, options.context);
+    }
+    return await handlers[0].handle(event);
   }
 
   async synchronouslyConsumeByMultipleHandlers(event: TEvent, options?: HandlerCallOptions): Promise<void> {
@@ -66,8 +74,28 @@ export class BaseEventBus<TEvent extends Event = Event> implements EventBus<TEve
       routingMetadata: options?.routingMetadata,
     });
     if (!handlers || handlers.length === 0) {
-      throw new HandlerNotFoundException();
+      throw new HandlerNotFoundException(this.getEventName(event), options?.routingMetadata);
     }
-    return handlers.forEach((handler) => handler.handle(event));
+
+    const results = await Promise.allSettled(
+      handlers.map((handler) => {
+        if (options?.context) {
+          return handler.handle(event, options.context);
+        }
+        return handler.handle(event);
+      }),
+    );
+
+    const failures = results
+      .map((result, index) => ({ result, index }))
+      .filter(({ result }) => result.status === 'rejected')
+      .map(({ result, index }) => ({
+        index,
+        error: (result as PromiseRejectedResult).reason,
+      }));
+
+    if (failures.length > 0) {
+      throw new MultipleHandlersFailedException(failures, this.getEventName(event), options?.routingMetadata);
+    }
   }
 }

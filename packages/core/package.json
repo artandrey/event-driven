@@ -7,6 +7,13 @@
     "dist",
     "README.md"
   ],
+  "keywords": [
+    "event driven",
+    "event bus",
+    "backend",
+    "architecture",
+    "event handler"
+  ],
   "author": "Andrii Artemenko",
   "license": "MIT",
   "repository": {

@@ -238,4 +238,37 @@ describe('EventBus', () => {
     expect(expectedHandlerSpy1).toHaveBeenCalledWith(new TestEvent());
     expect(expectedHandlerSpy2).toHaveBeenCalledWith(new TestEvent());
   });
+
+  it('should pass context to singleton handlers', async () => {
+    const handler = new TestHandler();
+    const handlerSpy = vi.spyOn(handler, 'handle');
+    const testContext = { test: 'test' };
+    handlerRegister.addHandler({ event: TestEvent }, handler);
+
+    await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent(), {
+      context: testContext,
+    });
+
+    expect(handlerSpy).toHaveBeenCalledWith(new TestEvent(), testContext);
+  });
+
+  it('should pass context to scoped handlers', async () => {
+    const spy = vi.fn();
+    const testContext = { test: 'test' };
+
+    class ScopedHandler implements EventHandler<TestEvent> {
+      constructor(private context?: any) {}
+
+      handle(event: TestEvent, context?: any): void {
+        spy(event, context, this.context);
+      }
+    }
+    handlerRegister.addScopedHandler({ event: TestEvent }, ScopedHandler);
+
+    await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent(), {
+      context: testContext,
+    });
+
+    expect(spy).toHaveBeenCalledWith(new TestEvent(), testContext, testContext);
+  });
 });
