@@ -29,4 +29,4 @@ jobs:
           pnpm --filter "@event-driven-architecture/bullmq" add -D bullmq@${{ matrix.bullmq-version }}
 
       - name: Test BullMQ package
-        run: pnpm nx test bullmq
+        run: pnpm nx run-many -t test -- bullmq
