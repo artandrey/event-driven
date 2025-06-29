@@ -1,5 +1,11 @@
 # @event-driven-architecture/bullmq
 
+## 0.4.0
+
+### Minor Changes
+
+- 96d6e1f: Support bullmq 3.x.x || 4.x.x || 5.x.x
+
 ## 0.3.0
 
 ### Minor Changes
