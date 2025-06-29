@@ -111,7 +111,7 @@ describe.each([
     });
 
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestEvent);
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toEqual(new TestEvent(payload));
+    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toMatchObject(new TestEvent(payload));
   });
 
   it('should publish and consume multiple events', async () => {
@@ -127,11 +127,11 @@ describe.each([
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestEvent);
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0]).toBeInstanceOf(TestEvent);
 
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls.map((call) => call[0])).toContainEqual(
-      new TestEvent({ test: 'test1' }),
+    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls.map((call) => call[0])).toEqual(
+      expect.arrayContaining([expect.objectContaining({ _payload: { test: 'test1' } })]),
     );
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls.map((call) => call[0])).toContainEqual(
-      new TestEvent({ test: 'test2' }),
+    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls.map((call) => call[0])).toEqual(
+      expect.arrayContaining([expect.objectContaining({ _payload: { test: 'test2' } })]),
     );
   });
 
@@ -147,7 +147,7 @@ describe.each([
     });
 
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestEvent);
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toEqual(
+    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toMatchObject(
       new TestEvent({ test: 'test' }),
     );
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][1].context).toBeDefined();

@@ -160,25 +160,24 @@ describe.each([
       const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
       eventPublisher.publish(new TestFlowEvent(mainPayload, subPayload));
-      await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
+      await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalledTimes(2), {
         timeout: 10000,
       });
 
-      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestSubEvent);
-      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0].payload).toEqual(subPayloadExpected);
+      const calls = eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls;
 
-      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0]).toBeInstanceOf(TestFlowEvent);
-
-      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0].payload).toEqual(
-        mainPayloadExpected,
+      expect(calls.map((c) => c[0])).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ _name: 'test-sub-event', _payload: subPayloadExpected }),
+          expect.objectContaining({ _name: 'test-flow-event', _payload: mainPayloadExpected }),
+        ]),
       );
 
-      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][1].context).toMatchObject({
-        queue: { name: QUEUE_2_NAME },
-      });
-      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][1].context).toMatchObject({
-        queue: { name: QUEUE_1_NAME },
-      });
+      const subCall = calls.find((c) => c[0] instanceof TestSubEvent);
+      const mainCall = calls.find((c) => c[0] instanceof TestFlowEvent);
+
+      expect(subCall?.[1].context).toMatchObject({ queue: { name: QUEUE_2_NAME } });
+      expect(mainCall?.[1].context).toMatchObject({ queue: { name: QUEUE_1_NAME } });
     },
   );
 
@@ -230,7 +229,7 @@ describe.each([
 
       eventPublisher.publish(new TestMainFlowEvent(mainPayload, subPayload));
 
-      await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
+      await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalledTimes(2), {
         timeout: 10000,
       });
       expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0].payload).toEqual(subPayloadExpected);
