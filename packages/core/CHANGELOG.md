@@ -1,5 +1,11 @@
 # @event-driven-architecture/core
 
+## 0.5.0
+
+### Minor Changes
+
+- b3940a7: Drop EventOption type as it was never used
+
 ## 0.4.2
 
 ### Patch Changes
