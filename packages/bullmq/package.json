@@ -27,6 +27,6 @@
   },
   "peerDependencies": {
     "@event-driven-architecture/core": "^0.4.1",
-    "bullmq": "^5.48.1"
+    "bullmq": "3.x.x || 4.x.x || 5.x.x"
   }
 }
