@@ -1,0 +1,32 @@
+name: BullMQ Test
+
+on:
+  workflow_call:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/bullmq/**'
+  pull_request:
+    paths:
+      - 'packages/bullmq/**'
+
+jobs:
+  bullmq-test:
+    name: Test BullMQ with version ${{ matrix.bullmq-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        bullmq-version: ['3.x.x', '4.x.x', '5.x.x']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Install BullMQ version
+        run: |
+          pnpm --filter "@event-driven-architecture/bullmq" add -D bullmq@${{ matrix.bullmq-version }}
+
+      - name: Test BullMQ package
+        run: pnpm nx test bullmq

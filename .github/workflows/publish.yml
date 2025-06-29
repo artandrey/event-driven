@@ -15,11 +15,14 @@ jobs:
   test:
     uses: ./.github/workflows/test.yml
 
+  bullmq-test:
+    uses: ./.github/workflows/bullmq-test.yml
+
   lint:
     uses: ./.github/workflows/lint.yml
 
   publish:
-    needs: [test, lint]
+    needs: [test, bullmq-test, lint]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

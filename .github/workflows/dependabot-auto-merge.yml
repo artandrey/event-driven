@@ -11,7 +11,13 @@ jobs:
     if: ${{ github.actor == 'dependabot[bot]' }}
     strategy:
       matrix:
-        check: ['lint / Linting and formatting check', 'test / Test', 'Build check']
+        check:
+          - 'lint / Linting and formatting check'
+          - 'test / Test'
+          - 'bullmq-test / Test BullMQ with version 3.x.x'
+          - 'bullmq-test / Test BullMQ with version 4.x.x'
+          - 'bullmq-test / Test BullMQ with version 5.x.x'
+          - 'Build check'
     steps:
       - name: Wait for ${{ matrix.check }}
         uses: lewagon/wait-on-check-action@v1.3.1
