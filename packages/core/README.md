@@ -90,6 +90,10 @@ handlerRegister.addScopedHandler(
 
 ## Event Bus
 
+### Publisher Registration
+
+**Important**: Before publishing events, you must register a publisher with the EventBus using the `setPublisher()` method. Attempting to publish events without a registered publisher will throw a `PublisherNotSetException`.
+
 ### Publishing Events
 
 To publish events, use the `EventBus`:
@@ -127,8 +131,8 @@ class AppBootstrap {
   ) {}
 
   initialize() {
-    // Set the publisher for the event bus
-    this.eventBus.publisher = this.customPublisher;
+    // Set the publisher for the event bus using the dedicated method
+    this.eventBus.setPublisher(this.customPublisher);
   }
 }
 ```
@@ -166,7 +170,7 @@ The event-driven module provides several key definitions:
 
 **Event Bus (EventBus)** - Core interface for the event bus. The event bus is responsible for publishing events and routing them to the appropriate handlers.
 
-**Event Publisher (EventPublisher)** - Interface for publishing events to external systems. Publishers are responsible for sending events to external message brokers or other systems.
+**Event Publisher (EventPublisher)** - Interface for publishing events to external systems. Publishers are responsible for sending events to external message brokers or other systems. Publishers must be registered with the EventBus using `setPublisher()` before publishing events.
 
 **Handler Register (HandlerRegister)** - Interface for the handler register service. Responsible for registering handlers and retrieving handler signatures.
 
@@ -241,7 +245,7 @@ const register: HandlerRegister = new BaseHandlerRegister();
 register.addHandler({ event: UserCreatedEvent, routingMetadata: { v: 1 } }, new UserCreatedHandler());
 
 const eventBus = new BaseEventBus(register);
-eventBus.publisher = inMemoryPublisher;
+eventBus.setPublisher(inMemoryPublisher);
 
 // 5. Emit and consume an event
 const event = new UserCreatedEvent({ userId: '1' });
