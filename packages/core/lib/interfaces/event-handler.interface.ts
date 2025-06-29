@@ -6,12 +6,6 @@ export enum EventHandlerScope {
 }
 
 export type EventSignature = new (...args: any[]) => Event;
-export type EventOption =
-  | EventSignature
-  | {
-      event: EventSignature;
-      metadata?: unknown;
-    };
 
 export interface EventHandler<TEvent extends Event = Event, TContext = void> {
   handle(event: TEvent, context: TContext): void;
