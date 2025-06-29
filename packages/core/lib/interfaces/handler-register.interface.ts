@@ -3,17 +3,29 @@ import { Event } from './event.interface';
 import { EventHandlerSignature } from './handler-signature.interface';
 import { Type } from './type.interface';
 
+/**
+ * Options for retrieving handlers from the handler register.
+ * @template E - event for which handlers are being retrieved
+ */
 export interface HandlerRetrievalOptions<E = unknown> {
+  /**
+   * The event instance for which handlers should be retrieved.
+   */
   event: E;
+  /**
+   * Optional routing metadata used to filter handlers based on routing rules.
+   */
   routingMetadata?: unknown;
+  /**
+   * Optional context object that may be used for scoped handler instantiation.
+   */
   context?: object;
 }
 
 /**
  * Handler register service that manages event handlers.
- * Responsible for storing handlers and retrieving handler signatures.
- * @template T The handler type
- * @template TypeT The handler class type
+ * Responsible for storing handlers and retrieving handler instances and signatures.
+ * @template T - handler type
  */
 export interface HandlerRegister<T extends EventHandler<Event> = EventHandler<Event>, TypeT extends Type<T> = Type<T>> {
   /**
