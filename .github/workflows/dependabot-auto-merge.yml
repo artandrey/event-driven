@@ -14,6 +14,9 @@ jobs:
         check:
           - 'lint / Linting and formatting check'
           - 'test / Test'
+          - 'bullmq-test / Test BullMQ with version 3.x.x'
+          - 'bullmq-test / Test BullMQ with version 4.x.x'
+          - 'bullmq-test / Test BullMQ with version 5.x.x'
           - 'Build check'
     steps:
       - name: Wait for ${{ matrix.check }}
@@ -23,50 +26,11 @@ jobs:
           check-name: ${{ matrix.check }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 30
-          # Allow the check to not exist if it doesn't run for this PR
-          allowed-conclusions: success,skipped
-
-  wait-for-bullmq-checks:
-    runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' }}
-    strategy:
-      matrix:
-        check:
-          - 'bullmq-test / Test BullMQ with version 3.x.x'
-          - 'bullmq-test / Test BullMQ with version 4.x.x'
-          - 'bullmq-test / Test BullMQ with version 5.x.x'
-    steps:
-      - name: Check if BullMQ files changed
-        id: bullmq-changes
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: files } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-            });
-
-            const bullmqChanged = files.some(file => 
-              file.filename.startsWith('packages/bullmq/')
-            );
-
-            return bullmqChanged;
-
-      - name: Wait for ${{ matrix.check }}
-        if: steps.bullmq-changes.outputs.result == 'true'
-        uses: lewagon/wait-on-check-action@v1.3.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          check-name: ${{ matrix.check }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 30
-          allowed-conclusions: success,skipped
 
   dependabot-merge:
-    needs: [wait-for-checks, wait-for-bullmq-checks]
+    needs: wait-for-checks
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' && always() && !cancelled() && !failure() }}
+    if: ${{ github.actor == 'dependabot[bot]' }}
     steps:
       - name: Dependabot metadata
         id: metadata

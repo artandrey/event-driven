@@ -6,41 +6,44 @@ import { HandlerCallOptions } from '../interfaces/handler-call-options.interface
 export type EventHandlerType<TEvent extends Event = Event> = Type<EventHandler<TEvent>>;
 
 export class BaseEventBus<TEvent extends Event = Event> implements EventBus<TEvent> {
-  protected _publisher: EventPublisher<TEvent> | null = null;
+  protected _pubsub: EventPublisher<TEvent> | null = null;
 
   constructor(private readonly handlersRegister: HandlerRegister<EventHandler<TEvent>>) {}
 
   get publisher(): EventPublisher<TEvent> {
-    if (!this._publisher) {
+    if (!this._pubsub) {
       throw new PublisherNotSetException();
     }
-    return this._publisher;
+    return this._pubsub;
   }
 
-  public setPublisher(publisher: EventPublisher<TEvent>) {
-    this._publisher = publisher;
+  set publisher(_publisher: EventPublisher<TEvent>) {
+    this._pubsub = _publisher;
   }
 
-  public publish<T extends TEvent>(event: T) {
-    if (!this._publisher) {
+  publish<T extends TEvent>(event: T) {
+    if (!this._pubsub) {
       throw new PublisherNotSetException();
     }
-    return this._publisher.publish(event);
+    return this._pubsub.publish(event);
   }
 
-  public publishAll<T extends TEvent>(events: T[]) {
-    if (!this._publisher) {
+  publishAll<T extends TEvent>(events: T[]) {
+    if (!this._pubsub) {
       throw new PublisherNotSetException();
     }
 
-    return this._publisher.publishAll(events);
+    if (this._pubsub.publishAll) {
+      return this._pubsub.publishAll(events);
+    }
+    return (events || []).map((event) => this._pubsub!.publish(event));
   }
 
   protected getEventName(event: TEvent) {
     return defaultGetEventName(event);
   }
 
-  public async synchronouslyConsumeByStrictlySingleHandler(event: TEvent, options?: HandlerCallOptions): Promise<void> {
+  async synchronouslyConsumeByStrictlySingleHandler(event: TEvent, options?: HandlerCallOptions): Promise<void> {
     const handlers = await this.handlersRegister.get({
       event,
       context: options?.context,
@@ -56,7 +59,7 @@ export class BaseEventBus<TEvent extends Event = Event> implements EventBus<TEve
     return handlers[0].handle(event);
   }
 
-  public async synchronouslyConsumeByMultipleHandlers(event: TEvent, options?: HandlerCallOptions): Promise<void> {
+  async synchronouslyConsumeByMultipleHandlers(event: TEvent, options?: HandlerCallOptions): Promise<void> {
     const handlers = await this.handlersRegister.get({
       event,
       context: options?.context,
