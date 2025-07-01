@@ -1,5 +1,4 @@
 import { BaseHandlerRegister } from '@event-driven-architecture/core';
-import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { ConnectionOptions, FlowProducer, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
@@ -15,6 +14,8 @@ import {
 import { BullMqEventConsumerService } from 'packages/bullmq/lib/services/event-consumer/bull-mq-event-consumer.service';
 import { FanoutRouter } from 'packages/bullmq/lib/services/fanout-router/fanout-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { withRedisContainer } from '../__fixtures__/redis-fixture';
 
 describe.each([
   {
@@ -34,9 +35,6 @@ describe.each([
     flowName: null,
   },
 ])('BullMQ Flow Jobs processing', ({ publisher, flowName }) => {
-  let redisContainer: StartedRedisContainer;
-  let connectionUrl: string;
-
   let workerRegisterService: WorkerRegisterService;
   let queueRegisterService: QueueRegisterService;
   let eventsRegisterService: EventsRegisterService;
@@ -53,17 +51,18 @@ describe.each([
   const QUEUE_1_NAME = 'main-queue';
   const QUEUE_2_NAME = 'sub-queue';
 
-  beforeEach(async () => {
-    redisContainer = await new RedisContainer('redis:7.2').start();
+  // Dedicated Redis instance per test.
+  const getConnectionOptions = withRedisContainer();
 
-    connectionUrl = redisContainer.getConnectionUrl();
+  beforeEach(async () => {
     workerRegisterService = new WorkerRegisterService();
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
     flowRegisterService = new FlowRegisterService();
     fanoutRouter = new FanoutRouter();
     const CONNECTION: ConnectionOptions = {
-      url: connectionUrl,
+      host: getConnectionOptions().host,
+      port: getConnectionOptions().port,
     };
 
     queueRegisterService.add(new Queue(QUEUE_1_NAME, { connection: CONNECTION }));
@@ -109,9 +108,6 @@ describe.each([
       await flowRegisterService.getNamed(flowName).close();
     } else {
       await flowRegisterService.getDefault().close();
-    }
-    if (redisContainer) {
-      await redisContainer.stop();
     }
   });
 

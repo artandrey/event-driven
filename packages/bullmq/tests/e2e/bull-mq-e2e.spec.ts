@@ -5,7 +5,6 @@ import {
   EventHandler,
   HandlerRegister,
 } from '@event-driven-architecture/core';
-import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { ConnectionOptions, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
@@ -21,6 +20,8 @@ import {
 } from 'packages/bullmq/lib';
 import { HandlesBullMq } from 'packages/bullmq/lib/util';
 
+import { withRedisContainer } from '../__fixtures__/redis-fixture';
+
 describe.each([
   {
     publisher: AtomicBullMqEventPublisher,
@@ -29,9 +30,6 @@ describe.each([
     publisher: BulkBullMqEventPublisher,
   },
 ])('BullMQ E2E', ({ publisher }) => {
-  let redisContainer: StartedRedisContainer;
-  let connectionUrl: string;
-
   let workerRegisterService: WorkerRegisterService;
   let queueRegisterService: QueueRegisterService;
   let eventsRegisterService: EventsRegisterService;
@@ -43,10 +41,10 @@ describe.each([
   const QUEUE_NAME = 'queue';
   const JOB_NAME = 'job';
 
-  beforeEach(async () => {
-    redisContainer = await new RedisContainer('redis:7.2').start();
+  // Dedicated Redis instance per test.
+  const getConnectionOptions = withRedisContainer();
 
-    connectionUrl = redisContainer.getConnectionUrl();
+  beforeEach(async () => {
     workerRegisterService = new WorkerRegisterService();
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
@@ -56,7 +54,8 @@ describe.each([
     fanoutRouter = new FanoutRouter();
 
     const CONNECTION: ConnectionOptions = {
-      url: connectionUrl,
+      host: getConnectionOptions().host,
+      port: getConnectionOptions().port,
     };
 
     queueRegisterService.add(new Queue(QUEUE_NAME, { connection: CONNECTION }));
@@ -82,10 +81,6 @@ describe.each([
   afterEach(async () => {
     await Promise.all(workerRegisterService.getAll().map((w) => w.close()));
     await Promise.all(queueRegisterService.getAll().map((q) => q.close()));
-
-    if (redisContainer) {
-      await redisContainer.stop();
-    }
   });
 
   it('should publish and consume event', async () => {

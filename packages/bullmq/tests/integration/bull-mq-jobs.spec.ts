@@ -1,5 +1,4 @@
 import { BaseHandlerRegister } from '@event-driven-architecture/core';
-import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { ConnectionOptions, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
@@ -15,6 +14,8 @@ import { BullMqEventConsumerService } from 'packages/bullmq/lib/services/event-c
 import { FanoutRouter } from 'packages/bullmq/lib/services/fanout-router/fanout-router';
 import { afterEach, beforeEach, describe, expect } from 'vitest';
 
+import { withRedisContainer } from '../__fixtures__/redis-fixture';
+
 describe.each([
   {
     publisher: BulkBullMqEventPublisher,
@@ -23,9 +24,6 @@ describe.each([
     publisher: AtomicBullMqEventPublisher,
   },
 ])('BullMQ Jobs processing', ({ publisher }) => {
-  let redisContainer: StartedRedisContainer;
-  let connectionUrl: string;
-
   let workerRegisterService: WorkerRegisterService;
   let queueRegisterService: QueueRegisterService;
   let eventsRegisterService: EventsRegisterService;
@@ -40,6 +38,8 @@ describe.each([
 
   const QUEUE_NAME = 'test-queue';
 
+  const getConnectionOptions = withRedisContainer();
+
   class TestEvent extends BullMqEvent<object> {
     constructor(payload: object) {
       super({ queueName: QUEUE_NAME, name: 'test-event', jobOptions: { attempts: 3 }, payload });
@@ -47,17 +47,14 @@ describe.each([
   }
 
   beforeEach(async () => {
-    redisContainer = await new RedisContainer('redis:7.2').start();
-
-    connectionUrl = redisContainer.getConnectionUrl();
-
     workerRegisterService = new WorkerRegisterService();
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
     flowRegisterService = new FlowRegisterService();
     fanoutRouter = new FanoutRouter();
     const CONNECTION: ConnectionOptions = {
-      url: connectionUrl,
+      host: getConnectionOptions().host,
+      port: getConnectionOptions().port,
     };
 
     queueRegisterService.add(new Queue(QUEUE_NAME, { connection: CONNECTION }));
@@ -86,10 +83,6 @@ describe.each([
   afterEach(async () => {
     await Promise.all(workerRegisterService.getAll().map((worker) => worker.close()));
     await Promise.all(queueRegisterService.getAll().map((queue) => queue.close()));
-
-    if (redisContainer) {
-      await redisContainer.stop();
-    }
   });
 
   it('should publish and consume event', async () => {
