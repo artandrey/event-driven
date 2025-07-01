@@ -1,5 +1,13 @@
 # @event-driven-architecture/core
 
+## 0.6.0
+
+### Minor Changes
+
+- 4d9a15d: BREAKING CHANGE: Use `eventBus.setPublisher(publisher)` instead of `eventBus.publisher = publisher`
+  - Add explicit `setPublisher()` method for publisher registration
+  - Remove optional `publishAll` fallback - now required in EventPublisher interface
+
 ## 0.5.0
 
 ### Minor Changes
@@ -32,7 +40,6 @@
 
   Package: @event-driven-architecture/core
   Release type: major
-
   1. New capability
      Event handlers are now resolved by a composite key that combines the event itself with optional routing metadata. This allows different handlers to react to the same event class while still being distinguished by metadata (for example, tenant ID, version, channel).
   2. Public-API breaking changes
