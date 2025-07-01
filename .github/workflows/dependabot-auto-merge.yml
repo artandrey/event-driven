@@ -29,7 +29,7 @@ jobs:
   dependabot-merge:
     needs: [wait-for-checks]
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' && always() && !cancelled() && !failure() }}
+    if: ${{ github.actor == 'dependabot[bot]'}}
     steps:
       - name: Dependabot metadata
         id: metadata
