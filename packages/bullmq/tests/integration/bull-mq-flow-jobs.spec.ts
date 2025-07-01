@@ -1,5 +1,5 @@
 import { BaseHandlerRegister } from '@event-driven-architecture/core';
-import { RedisContainer } from '@testcontainers/redis';
+import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { ConnectionOptions, FlowProducer, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
@@ -14,7 +14,6 @@ import {
 } from 'packages/bullmq/lib';
 import { BullMqEventConsumerService } from 'packages/bullmq/lib/services/event-consumer/bull-mq-event-consumer.service';
 import { FanoutRouter } from 'packages/bullmq/lib/services/fanout-router/fanout-router';
-import { StartedTestContainer } from 'testcontainers';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe.each([
@@ -35,9 +34,8 @@ describe.each([
     flowName: null,
   },
 ])('BullMQ Flow Jobs processing', ({ publisher, flowName }) => {
-  let redisContainer: StartedTestContainer;
-  let redisHost: string;
-  let redisPort: number;
+  let redisContainer: StartedRedisContainer;
+  let connectionUrl: string;
 
   let workerRegisterService: WorkerRegisterService;
   let queueRegisterService: QueueRegisterService;
@@ -56,18 +54,16 @@ describe.each([
   const QUEUE_2_NAME = 'sub-queue';
 
   beforeEach(async () => {
-    redisContainer = await new RedisContainer().start();
+    redisContainer = await new RedisContainer('redis:7.2').start();
 
-    redisHost = redisContainer.getHost();
-    redisPort = redisContainer.getFirstMappedPort();
+    connectionUrl = redisContainer.getConnectionUrl();
     workerRegisterService = new WorkerRegisterService();
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
     flowRegisterService = new FlowRegisterService();
     fanoutRouter = new FanoutRouter();
     const CONNECTION: ConnectionOptions = {
-      host: redisHost,
-      port: redisPort,
+      url: connectionUrl,
     };
 
     queueRegisterService.add(new Queue(QUEUE_1_NAME, { connection: CONNECTION }));
