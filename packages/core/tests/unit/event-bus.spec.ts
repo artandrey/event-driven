@@ -246,10 +246,10 @@ describe('EventBus Event Handling', () => {
   });
 
   it('should pass context to singleton handlers', async () => {
-    const handler = new TestHandler();
+    const handler = new TestEventHandler();
     const handlerSpy = vi.spyOn(handler, 'handle');
     const testContext = { test: 'test' };
-    handlerRegister.addHandler({ event: TestEvent }, handler);
+    handlerRegister.addHandler({ handles: TestEvent }, handler);
 
     await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent(), {
       context: testContext,
@@ -269,7 +269,7 @@ describe('EventBus Event Handling', () => {
         spy(event, context, this.context);
       }
     }
-    handlerRegister.addScopedHandler({ event: TestEvent }, ScopedHandler);
+    handlerRegister.addScopedHandler({ handles: TestEvent }, ScopedHandler);
 
     await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent(), {
       context: testContext,
