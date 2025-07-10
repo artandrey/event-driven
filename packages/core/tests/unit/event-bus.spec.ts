@@ -414,14 +414,13 @@ describe('EventBus Task Processing', () => {
   });
 
   it('should call scoped TaskProcessor with the correct task instance', async () => {
+    const spy = vi.fn(() => 'scoped');
     class ScopedProcessor implements TaskProcessor<TestTask, string> {
-      handle = vi.fn(() => 'scoped');
+      handle = spy;
     }
     handlerRegister.addScopedHandler({ handles: TestTask }, ScopedProcessor);
     const task = new TestTask();
     await eventBus.synchronouslyConsumeByStrictlySingleHandler(task);
-    const handlers = await handlerRegister.get({ handlable: task });
-    const scopedInstance = handlers && handlers[0];
-    expect(scopedInstance.handle).toHaveBeenCalledWith(task);
+    expect(spy).toHaveBeenCalledWith(task);
   });
 });

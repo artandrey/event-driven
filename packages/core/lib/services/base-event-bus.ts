@@ -63,9 +63,9 @@ export class BaseEventBus<THandlable extends Handlable = Handlable, TResult = un
       );
     }
     if (options?.context) {
-      return (await handlers[0].handle(handlable, options.context)) as HandlingResult<TResult>;
+      return { result: (await handlers[0].handle(handlable, options.context)) as TResult };
     }
-    return (await handlers[0].handle(handlable)) as HandlingResult<TResult>;
+    return { result: (await handlers[0].handle(handlable)) as TResult };
   }
 
   public async synchronouslyConsumeByMultipleHandlers(
@@ -82,12 +82,14 @@ export class BaseEventBus<THandlable extends Handlable = Handlable, TResult = un
     }
 
     const results = await Promise.allSettled(
-      handlers.map((handler) => {
-        if (options?.context) {
-          return handler.handle(handlable, options.context);
-        }
-        return handler.handle(handlable);
-      }),
+      handlers
+        .map((handler) => {
+          if (options?.context) {
+            return handler.handle(handlable, options.context);
+          }
+          return handler.handle(handlable);
+        })
+        .map((result) => ({ result: result as TResult })),
     );
 
     const failures = results
