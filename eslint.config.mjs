@@ -32,6 +32,7 @@ export default [
           custom: { regex: '^I[A-Z]', match: false },
         },
       ],
+      '@typescript-eslint/no-empty-object-type': 'off',
     },
   },
 ];

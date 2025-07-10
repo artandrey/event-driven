@@ -1,10 +1,14 @@
-export type { EventBus as EventBus } from './event-bus.interface';
-export type { Event as Event } from './event.interface';
-export type { EventPublisher as EventPublisher } from './event-publisher.interface';
-export type {
-  HandlerRegister as HandlerRegister,
-  HandlerRetrievalOptions as HandlerRetrievalOptions,
-} from './handler-register.interface';
-export type { EventHandlerSignature as EventHandlerSignature } from './handler-signature.interface';
-export { EventHandlerScope, EventSignature, EventHandler as EventHandler } from './event-handler.interface';
+export type { EventBus } from './event-bus.interface';
+export type { Event } from './event.interface';
+export type { Publisher } from './publisher.interface';
+export type { HandlerRegister, HandlerRetrievalOptions } from './handler-register.interface';
+export type { HandlerSignature } from './handler-signature.interface';
+export { HandlerScope } from './handler-scope.enum';
+export type { HandlableSignature } from './handlable-signature.interface';
+export type { EventHandler } from './event-handler.interface';
 export type { Type } from './type.interface';
+export type { Handlable } from './handlable.interface';
+export type { Handler } from './handler.interface';
+export type { HandlerCallOptions } from './handler-call-options.interface';
+export type { Task } from './task.interface';
+export type { TaskProcessor } from './task-processor.interface';

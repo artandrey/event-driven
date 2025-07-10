@@ -1,6 +1,6 @@
 import { Event, EventHandler, Type } from '../interfaces';
 import { HandlerRegister, HandlerRetrievalOptions } from '../interfaces/handler-register.interface';
-import { EventHandlerSignature } from '../interfaces/handler-signature.interface';
+import { HandlerSignature } from '../interfaces/handler-signature.interface';
 import { ObjectHashMap } from '../util/object-hash-map';
 
 export interface HandlerKey {
@@ -13,23 +13,23 @@ export class BaseHandlerRegister<T extends EventHandler<Event> = EventHandler<Ev
 {
   private handlers = new ObjectHashMap<HandlerKey, Set<T>>();
   private scopedHandlers = new ObjectHashMap<HandlerKey, Set<TypeT>>();
-  private handlersSignatures: EventHandlerSignature[] = [];
+  private handlersSignatures: HandlerSignature[] = [];
 
-  public addHandler(handlerSignature: EventHandlerSignature, instance: T): void {
+  public addHandler(handlerSignature: HandlerSignature, instance: T): void {
     const handlerKey = this.handlerSignatureToHandlerKey(handlerSignature);
     const set = this.handlers.get(handlerKey) ?? new Set();
     this.handlers.set(handlerKey, set.add(instance));
     this.addHandlerSignature(handlerSignature);
   }
 
-  public addScopedHandler(handlerSignature: EventHandlerSignature, handler: TypeT): void {
+  public addScopedHandler(handlerSignature: HandlerSignature, handler: TypeT): void {
     const handlerKey = this.handlerSignatureToHandlerKey(handlerSignature);
     const set = this.scopedHandlers.get(handlerKey) ?? new Set();
     this.scopedHandlers.set(handlerKey, set.add(handler));
     this.addHandlerSignature(handlerSignature);
   }
 
-  private addHandlerSignature(signature: EventHandlerSignature): void {
+  private addHandlerSignature(signature: HandlerSignature): void {
     this.handlersSignatures.push(signature);
   }
 
@@ -66,21 +66,21 @@ export class BaseHandlerRegister<T extends EventHandler<Event> = EventHandler<Ev
     return constructor.name as string;
   }
 
-  private handlerSignatureToHandlerKey(handlerSignature: EventHandlerSignature): HandlerKey {
+  private handlerSignatureToHandlerKey(handlerSignature: HandlerSignature): HandlerKey {
     return {
-      event: handlerSignature.event.name,
+      event: handlerSignature.handles.name,
       routingMetadata: handlerSignature.routingMetadata,
     };
   }
 
   private handlerRetrievalOptionsToHandlerKey(options: HandlerRetrievalOptions): HandlerKey {
     return {
-      event: this.getName(options.event),
+      event: this.getName(options.handlable),
       routingMetadata: options.routingMetadata,
     };
   }
 
-  public getHandlerSignatures(): Readonly<EventHandlerSignature[]> {
+  public getHandlerSignatures(): Readonly<HandlerSignature[]> {
     return this.handlersSignatures;
   }
 }
