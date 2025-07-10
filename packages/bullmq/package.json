@@ -1,6 +1,6 @@
 {
   "name": "@event-driven-architecture/bullmq",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "description": "BullMQ package for event-driven architectures in TypeScript server side applications.",
   "private": false,
   "files": [
@@ -21,12 +21,12 @@
   "types": "dist/index.d.ts",
   "devDependencies": {
     "@event-driven-architecture/core": "*",
-    "@testcontainers/redis": "^10.24.2",
+    "@testcontainers/redis": "^11.0.3",
     "bullmq": "^5.48.1",
-    "testcontainers": "^10.24.2"
+    "testcontainers": "^11.0.3"
   },
   "peerDependencies": {
-    "@event-driven-architecture/core": "^0.4.1",
+    "@event-driven-architecture/core": "^0.6.0",
     "bullmq": "3.x.x || 4.x.x || 5.x.x"
   }
 }
