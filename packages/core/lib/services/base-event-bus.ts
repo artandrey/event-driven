@@ -4,10 +4,8 @@ import {
   MultipleHandlersFoundException,
   PublisherNotSetException,
 } from '../exceptions';
-import { EventBus, Handlable, Handler, HandlerCallOptions, HandlerRegister, Publisher, Type } from '../interfaces';
+import { EventBus, Handlable, Handler, HandlerCallOptions, HandlerRegister, Publisher } from '../interfaces';
 import { HandlingResult } from '../interfaces/event-bus.interface';
-
-export type EventHandlerType<THandlable extends Handlable = Handlable> = Type<Handler<THandlable>>;
 
 export class BaseEventBus<THandlable extends Handlable = Handlable, TResult = unknown>
   implements EventBus<THandlable, TResult>
