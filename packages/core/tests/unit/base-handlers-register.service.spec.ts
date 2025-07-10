@@ -26,18 +26,18 @@ describe('BaseHandlersRegisterService', () => {
   });
 
   it('should store all handlers by instances', async () => {
-    service.addHandler({ event: TestEvent }, new TestHandler());
-    service.addHandler({ event: TestEvent }, new TestHandler());
+    service.addHandler({ handles: TestEvent }, new TestHandler());
+    service.addHandler({ handles: TestEvent }, new TestHandler());
 
-    const handlers = await service.get({ event: new TestEvent() });
+    const handlers = await service.get({ handlable: new TestEvent() });
     expect(handlers).toHaveLength(2);
   });
 
   it('should store only one scoped handler per class', async () => {
-    service.addScopedHandler({ event: TestEvent }, TestHandler);
-    service.addScopedHandler({ event: TestEvent }, TestHandler);
+    service.addScopedHandler({ handles: TestEvent }, TestHandler);
+    service.addScopedHandler({ handles: TestEvent }, TestHandler);
 
-    const handlers = await service.get({ event: new TestEvent() });
+    const handlers = await service.get({ handlable: new TestEvent() });
     expect(handlers).toHaveLength(1);
   });
 
@@ -45,10 +45,10 @@ describe('BaseHandlersRegisterService', () => {
     const handlerA = createHandlerWithFixedName();
     const handlerB = createHandlerWithFixedName();
 
-    service.addScopedHandler({ event: TestEvent }, handlerA);
-    service.addScopedHandler({ event: TestEvent }, handlerB);
+    service.addScopedHandler({ handles: TestEvent }, handlerA);
+    service.addScopedHandler({ handles: TestEvent }, handlerB);
 
-    const handlers = await service.get({ event: new TestEvent() });
+    const handlers = await service.get({ handlable: new TestEvent() });
     expect(handlers).toHaveLength(2);
     expect(handlers.find((handler) => handler instanceof handlerA)).toBeDefined();
     expect(handlers.find((handler) => handler instanceof handlerB)).toBeDefined();
@@ -57,18 +57,18 @@ describe('BaseHandlersRegisterService', () => {
   it('should add handler by signature', () => {
     service.addHandler(
       {
-        event: TestEvent,
+        handles: TestEvent,
       },
       new TestHandler(),
     );
 
-    expect(service.getHandlerSignatures()).toEqual([{ event: TestEvent }]);
+    expect(service.getHandlerSignatures()).toEqual([{ handles: TestEvent }]);
   });
 
   it('should add scoped handler by signature with metadata', () => {
     service.addHandler(
       {
-        event: TestEvent,
+        handles: TestEvent,
         routingMetadata: {
           name: 'test',
         },
@@ -76,6 +76,6 @@ describe('BaseHandlersRegisterService', () => {
       new TestHandler(),
     );
 
-    expect(service.getHandlerSignatures()).toEqual([{ event: TestEvent, routingMetadata: { name: 'test' } }]);
+    expect(service.getHandlerSignatures()).toEqual([{ handles: TestEvent, routingMetadata: { name: 'test' } }]);
   });
 });
