@@ -16,56 +16,26 @@ export class ObjectHashMap<K, V> implements Map<K, V> {
     return this.map.size;
   }
 
-  public entries(): MapIterator<[K, V]> {
-    return {
-      next: () => {
-        const next = this.map.entries().next();
-        if (next.done) {
-          return { done: true, value: undefined };
-        }
-        return { done: false, value: [next.value[1].originalKey, next.value[1].value] };
-      },
-      [Symbol.iterator]: () => this.entries(),
-    };
+  public *entries(): MapIterator<[K, V]> {
+    for (const stored of this.map.values()) {
+      yield [stored.originalKey, stored.value];
+    }
   }
 
-  public keys(): MapIterator<K> {
-    return {
-      next: () => {
-        const next = this.map.values().next();
-        if (next.done) {
-          return { done: true, value: undefined };
-        }
-        return { done: false, value: next.value.originalKey };
-      },
-      [Symbol.iterator]: () => this.keys(),
-    };
+  public *keys(): MapIterator<K> {
+    for (const stored of this.map.values()) {
+      yield stored.originalKey;
+    }
   }
 
-  public values(): MapIterator<V> {
-    return {
-      next: () => {
-        const next = this.map.values().next();
-        if (next.done) {
-          return { done: true, value: undefined };
-        }
-        return { done: false, value: next.value.value };
-      },
-      [Symbol.iterator]: () => this.values(),
-    };
+  public *values(): MapIterator<V> {
+    for (const stored of this.map.values()) {
+      yield stored.value;
+    }
   }
 
   public [Symbol.iterator](): MapIterator<[K, V]> {
-    return {
-      next: () => {
-        const next = this.map[Symbol.iterator]().next();
-        if (next.done) {
-          return { done: true, value: undefined };
-        }
-        return { done: false, value: [next.value[1].originalKey, next.value[1].value] };
-      },
-      [Symbol.iterator]: () => this[Symbol.iterator](),
-    };
+    return this.entries();
   }
 
   public [Symbol.toStringTag] = 'ObjectHashMap';

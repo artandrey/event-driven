@@ -27,7 +27,7 @@ describe('EventBus', () => {
   beforeEach(() => {
     handlerRegister = new BaseHandlerRegister();
     const concreteEventBus = new BaseEventBus(handlerRegister);
-    concreteEventBus.publisher = publisher;
+    concreteEventBus.setPublisher(publisher);
     eventBus = concreteEventBus;
   });
 
