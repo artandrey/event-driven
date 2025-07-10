@@ -1,12 +1,7 @@
 import { Event } from './event.interface';
+import { Handler } from './handler.interface';
 
-export enum EventHandlerScope {
-  SINGLETON = 'singleton',
-  SCOPED = 'scoped',
-}
-
-export type EventSignature = new (...args: any[]) => Event;
-
-export interface EventHandler<TEvent extends Event = Event, TContext = unknown> {
+export interface EventHandler<TEvent extends Event = Event, TContext = unknown>
+  extends Handler<TEvent, void, TContext> {
   handle(event: TEvent, context?: TContext): void | Promise<void>;
 }

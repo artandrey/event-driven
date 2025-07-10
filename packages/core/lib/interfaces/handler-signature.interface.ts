@@ -1,6 +1,6 @@
-import { EventSignature } from './event-handler.interface';
+import { HandlableSignature } from './handlable-signature.interface';
 
-export interface EventHandlerSignature {
-  event: EventSignature;
+export interface HandlerSignature {
+  handles: HandlableSignature;
   routingMetadata?: unknown;
 }
