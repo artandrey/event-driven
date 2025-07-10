@@ -4,82 +4,89 @@ import {
   MultipleHandlersFoundException,
   PublisherNotSetException,
 } from '../exceptions';
-import { defaultGetEventName } from '../helpers/default-get-event-name';
-import { Event, EventBus, EventHandler, EventPublisher, HandlerRegister, Type } from '../interfaces';
-import { HandlerCallOptions } from '../interfaces/handler-call-options.interface';
+import { EventBus, Handlable, Handler, HandlerCallOptions, HandlerRegister, Publisher, Type } from '../interfaces';
+import { HandlingResult } from '../interfaces/event-bus.interface';
 
-export type EventHandlerType<TEvent extends Event = Event> = Type<EventHandler<TEvent>>;
+export type EventHandlerType<THandlable extends Handlable = Handlable> = Type<Handler<THandlable>>;
 
-export class BaseEventBus<TEvent extends Event = Event> implements EventBus<TEvent> {
-  protected _publisher: EventPublisher<TEvent> | null = null;
+export class BaseEventBus<THandlable extends Handlable = Handlable, TResult = unknown>
+  implements EventBus<THandlable, TResult>
+{
+  protected _publisher: Publisher<THandlable> | null = null;
 
-  constructor(private readonly handlersRegister: HandlerRegister<EventHandler<TEvent>>) {}
+  constructor(private readonly handlersRegister: HandlerRegister<Handler<THandlable>>) {}
 
-  get publisher(): EventPublisher<TEvent> {
+  get publisher(): Publisher<THandlable> {
     if (!this._publisher) {
       throw new PublisherNotSetException();
     }
     return this._publisher;
   }
 
-  public setPublisher(publisher: EventPublisher<TEvent>) {
+  public setPublisher(publisher: Publisher<THandlable>) {
     this._publisher = publisher;
   }
 
-  public publish<T extends TEvent>(event: T) {
+  public publish<T extends THandlable>(handlable: T) {
     if (!this._publisher) {
       throw new PublisherNotSetException();
     }
-    return this._publisher.publish(event);
+    return this._publisher.publish(handlable);
   }
 
-  public publishAll<T extends TEvent>(events: T[]) {
+  public publishAll<T extends THandlable>(handlables: T[]) {
     if (!this._publisher) {
       throw new PublisherNotSetException();
     }
 
-    return this._publisher.publishAll(events);
+    return this._publisher.publishAll(handlables);
   }
 
-  protected getEventName(event: TEvent) {
-    return defaultGetEventName(event);
-  }
-
-  public async synchronouslyConsumeByStrictlySingleHandler(event: TEvent, options?: HandlerCallOptions): Promise<void> {
+  public async synchronouslyConsumeByStrictlySingleHandler(
+    handlable: THandlable,
+    options?: HandlerCallOptions,
+  ): Promise<HandlingResult<TResult>> {
     const handlers = await this.handlersRegister.get({
-      event,
+      handlable: handlable,
       context: options?.context,
       routingMetadata: options?.routingMetadata,
     });
 
     if (!handlers || handlers.length === 0) {
-      throw new HandlerNotFoundException(this.getEventName(event), options?.routingMetadata);
+      throw new HandlerNotFoundException(this.getHandlableName(handlable), options?.routingMetadata);
     }
     if (handlers.length !== 1) {
-      throw new MultipleHandlersFoundException(this.getEventName(event), options?.routingMetadata, handlers.length);
+      throw new MultipleHandlersFoundException(
+        this.getHandlableName(handlable),
+        options?.routingMetadata,
+        handlers.length,
+      );
     }
     if (options?.context) {
-      return await handlers[0].handle(event, options.context);
+      return (await handlers[0].handle(handlable, options.context)) as HandlingResult<TResult>;
     }
-    return await handlers[0].handle(event);
+    return (await handlers[0].handle(handlable)) as HandlingResult<TResult>;
   }
 
-  public async synchronouslyConsumeByMultipleHandlers(event: TEvent, options?: HandlerCallOptions): Promise<void> {
+  public async synchronouslyConsumeByMultipleHandlers(
+    handlable: THandlable,
+    options?: HandlerCallOptions,
+  ): Promise<HandlingResult<TResult>[]> {
     const handlers = await this.handlersRegister.get({
-      event,
+      handlable: handlable,
       context: options?.context,
       routingMetadata: options?.routingMetadata,
     });
     if (!handlers || handlers.length === 0) {
-      throw new HandlerNotFoundException(this.getEventName(event), options?.routingMetadata);
+      throw new HandlerNotFoundException(this.getHandlableName(handlable), options?.routingMetadata);
     }
 
     const results = await Promise.allSettled(
       handlers.map((handler) => {
         if (options?.context) {
-          return handler.handle(event, options.context);
+          return handler.handle(handlable, options.context);
         }
-        return handler.handle(event);
+        return handler.handle(handlable);
       }),
     );
 
@@ -92,7 +99,15 @@ export class BaseEventBus<TEvent extends Event = Event> implements EventBus<TEve
       }));
 
     if (failures.length > 0) {
-      throw new MultipleHandlersFailedException(failures, this.getEventName(event), options?.routingMetadata);
+      throw new MultipleHandlersFailedException(failures, this.getHandlableName(handlable), options?.routingMetadata);
     }
+
+    return handlers.map((handler) => ({
+      result: handler.handle(handlable),
+    })) as HandlingResult<TResult>[];
+  }
+
+  private getHandlableName(handlable: THandlable): string {
+    return handlable.constructor.name;
   }
 }
