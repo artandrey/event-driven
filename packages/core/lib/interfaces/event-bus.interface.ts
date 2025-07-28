@@ -43,31 +43,44 @@ export interface EventBus<TEvent extends Event = Event, TResult = unknown> {
    * This is a fire-and-forget operation that forwards the event to external systems.
    *
    * @param event - The event to be published
+   * @returns A promise if the publisher is asynchronous, void otherwise
    * @throws PublisherNotSetException when no publisher is registered
    *
    * @example
    * ```typescript
+   * // Synchronous publisher
    * eventBus.publish(new UserCreatedEvent({ userId: '123' }));
+   *
+   * // Asynchronous publisher
+   * await eventBus.publish(new UserCreatedEvent({ userId: '123' }));
    * ```
    */
-  publish<T extends TEvent>(event: T): void;
+  publish<T extends TEvent>(event: T): void | Promise<void>;
 
   /**
    * Publishes multiple events to the configured publisher.
    * This is a fire-and-forget operation that forwards all events to external systems.
    *
    * @param events - The events to be published
+   * @returns A promise if the publisher is asynchronous, void otherwise
    * @throws PublisherNotSetException when no publisher is registered
    *
    * @example
    * ```typescript
+   * // Synchronous publisher
    * eventBus.publishAll([
+   *   new UserCreatedEvent({ userId: '123' }),
+   *   new EmailSentEvent({ userId: '123', email: 'user@example.com' })
+   * ]);
+   *
+   * // Asynchronous publisher
+   * await eventBus.publishAll([
    *   new UserCreatedEvent({ userId: '123' }),
    *   new EmailSentEvent({ userId: '123', email: 'user@example.com' })
    * ]);
    * ```
    */
-  publishAll(events: TEvent[]): void;
+  publishAll(events: TEvent[]): void | Promise<void>;
 
   /**
    * Consumes an event by exactly one handler synchronously and returns the result.

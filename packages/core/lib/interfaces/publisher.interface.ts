@@ -45,28 +45,39 @@ export interface Publisher<THandlable extends Handlable = Handlable> {
    * Publishes a single handlable to the external system.
    *
    * @param handlable - The handlable to be published
+   * @returns A promise that resolves when the handlable has been published, or void for synchronous publishers
    *
    * @example
    * ```typescript
+   * // Synchronous publisher
    * publisher.publish(new UserCreatedEvent({ userId: '123' }));
-   * publisher.publish(new OrderProcessingTask({ orderId: 'order-456' }));
+   *
+   * // Asynchronous publisher
+   * await publisher.publish(new OrderProcessingTask({ orderId: 'order-456' }));
    * ```
    */
-  publish<T extends THandlable>(handlable: T): void;
+  publish<T extends THandlable>(handlable: T): void | Promise<void>;
 
   /**
    * Publishes multiple handlables to the external system in a batch operation.
    *
    * @param handlables - The handlables to be published
+   * @returns A promise that resolves when all handlables have been published, or void for synchronous publishers
    *
    * @example
    * ```typescript
+   * // Synchronous publisher
    * publisher.publishAll([
    *   new UserCreatedEvent({ userId: '123' }),
-   *   new EmailSentEvent({ userId: '123', email: 'user@example.com' }),
+   *   new EmailSentEvent({ userId: '123', email: 'user@example.com' })
+   * ]);
+   *
+   * // Asynchronous publisher
+   * await publisher.publishAll([
+   *   new UserCreatedEvent({ userId: '123' }),
    *   new OrderProcessingTask({ orderId: 'order-456' })
    * ]);
    * ```
    */
-  publishAll(handlables: THandlable[]): void;
+  publishAll(handlables: THandlable[]): void | Promise<void>;
 }
