@@ -3,12 +3,9 @@
 The main purpose of this package is to provide core functionality for building event-driven architectures in TypeScript applications.
 `EventBus` provides methods to make it possible to extend event routing for specific integrations and enable acknowledgement mechanisms for message brokers.
 
-Starting from this version, the core package supports not only events but also tasks and any custom "handlable" objects through a generic abstraction system.
+TStarting from this version, the core package supports not only events but also tasks and any custom "handlable" objects through a generic abstraction system.
 
-# Disclaimer
-
-This package is still under development and the API may change in further releases.
-Documentation may not cover all features.
+# Navigation
 
 - [Installation](#installation)
 - [Core Concepts](#core-concepts)
@@ -382,6 +379,47 @@ export class ScopedCalculateOrderTotalProcessor
   }
 }
 ```
+
+## Advanced Generics Usage
+
+The core module uses generics extensively for type safety. Here's how to leverage them:
+
+### Typing EventBus Results
+
+You can specify the expected result type when creating an EventBus instance:
+
+```typescript
+import { BaseEventBus, EventBus, HandlingResult } from '@event-driven-architecture/core';
+
+interface ProcessingValue {
+  // ... typed structure
+}
+
+const eventBus: EventBus<MyEvent, ProcessingValue> = new BaseEventBus<MyEvent, ProcessingValue>(handlerRegister);
+
+// When consuming:
+const result: HandlingResult<ProcessingValue> = await eventBus.synchronouslyConsumeByStrictlySingleHandler(myEvent);
+
+if (result.isSuccess()) {
+  const value: ProcessingValue = result.getValueOrThrow();
+}
+```
+
+### Generic Handlers
+
+Handlers can be typed for specific payloads and results:
+
+```typescript
+class TypedHandler implements Handler<MyEvent, ProcessingValue> {
+  handle(event: MyEvent): ProcessingValue {
+    return {
+      // expected structure
+    };
+  }
+}
+```
+
+This ensures compile-time checks for integrations.
 
 ## Putting it all together – Bootstrapping a minimal in-memory system
 
