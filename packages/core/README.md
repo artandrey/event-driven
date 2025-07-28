@@ -239,7 +239,7 @@ class AppBootstrap {
 
 ### Consuming Events and Tasks Synchronously
 
-When processing handlables synchronously, the EventBus returns `HandlingResult` objects:
+When processing handlables synchronously, the EventBus returns `HandlingResult` objects that encapsulate both successful results and errors using the Result pattern. This eliminates the need to catch exceptions and provides a more predictable error handling experience:
 
 ```typescript
 // Single handler - returns HandlingResult<TResult>
@@ -248,7 +248,12 @@ const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(
   { routingMetadata: { v: 1 } },
 );
 
-console.log('Order total:', result.result.total); // Access the result
+// Check if the operation was successful
+if (result.isSuccess()) {
+  console.log('Order total:', result.getValueOrThrow().total);
+} else {
+  console.error('Error processing task:', result.getErrorOrNull());
+}
 
 // Multiple handlers - returns HandlingResult<TResult>[]
 const results = await eventBus.synchronouslyConsumeByMultipleHandlers(new UserCreatedEvent({ userId: '123' }), {
@@ -256,9 +261,53 @@ const results = await eventBus.synchronouslyConsumeByMultipleHandlers(new UserCr
 });
 
 results.forEach((result) => {
-  console.log('Handler result:', result.result);
+  if (result.isSuccess()) {
+    console.log('Handler result:', result.getValueOrThrow());
+  } else {
+    console.error('Handler failed:', result.getErrorOrNull());
+  }
 });
 ```
+
+### Error Handling with HandlingResult
+
+The `HandlingResult` class provides several methods for working with results and errors:
+
+```typescript
+const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new SomeTask());
+
+// Check result status
+if (result.isSuccess()) {
+  // Safe to access value
+  const value = result.getValueOrThrow();
+} else if (result.isError()) {
+  // Handle error case
+  const error = result.getErrorOrNull();
+  console.error('Processing failed:', error);
+}
+
+// Alternative: Get value or null (doesn't throw)
+const valueOrNull = result.getValueOrNull();
+if (valueOrNull !== null) {
+  // Process successful result
+}
+
+// Get value or throw the contained error
+try {
+  const value = result.getValueOrThrow();
+  // Process value
+} catch (error) {
+  // Handle the original error that caused the failure
+}
+```
+
+### Common Error Types
+
+The event bus can return the following error types in failed `HandlingResult` objects:
+
+- **`HandlerNotFoundException`** - No handlers found for the given handlable and routing metadata
+- **`MultipleHandlersFoundException`** - Multiple handlers found when exactly one was expected
+- **`HandlerThrownException`** - A handler threw an exception during execution (contains the original error)
 
 ### Consuming with Context
 
@@ -293,7 +342,7 @@ The event-driven module provides several key definitions:
 
 **Handler Register (HandlerRegister)** - Interface for registering handlers and retrieving handler signatures.
 
-**HandlingResult** - Wrapper object returned by synchronous processing methods, containing the handler's result.
+**HandlingResult** - Result wrapper that encapsulates both successful results and errors from synchronous handler execution. Uses the Result pattern to eliminate exception throwing and provide predictable error handling. Contains methods like `isSuccess()`, `isError()`, `getValueOrThrow()`, and `getErrorOrNull()`.
 
 ## Scoped Handlers with Context
 
@@ -398,11 +447,22 @@ const task = new CalculateOrderTotalTask({ orderId: 'order-1', total: 100 });
 const eventResult = await eventBus.synchronouslyConsumeByStrictlySingleHandler(event, {
   routingMetadata: { v: 1 },
 });
-// log: User created (v=1): 1
+
+if (eventResult.isSuccess()) {
+  // log: User created (v=1): 1
+  console.log('Event processed successfully');
+} else {
+  console.error('Event processing failed:', eventResult.getErrorOrNull());
+}
 
 // Consume task (returns calculated result in HandlingResult)
 const taskResult = await eventBus.synchronouslyConsumeByStrictlySingleHandler(task);
-console.log('Task result:', taskResult.result.calculatedTotal); // 110
+
+if (taskResult.isSuccess()) {
+  console.log('Task result:', taskResult.getValueOrThrow().calculatedTotal); // 110
+} else {
+  console.error('Task processing failed:', taskResult.getErrorOrNull());
+}
 
 // Or publish to forward to the configured publisher
 eventBus.publish(event);

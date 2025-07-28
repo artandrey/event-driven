@@ -4,7 +4,10 @@ import {
   Event,
   EventBus,
   EventHandler,
+  HandlerNotFoundException,
   HandlerRegister,
+  HandlerThrownException,
+  MultipleHandlersFoundException,
   Publisher,
   Task,
   TaskProcessor,
@@ -93,14 +96,18 @@ describe('EventBus Event Handling', () => {
   });
 
   it('should throw error if consumed by single handler and no handler is found', async () => {
-    await expect(eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent())).rejects.toThrow();
+    const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent());
+    expect(result.isError()).toBe(true);
+    expect(result.getErrorOrNull()).toBeInstanceOf(HandlerNotFoundException);
   });
 
   it('should throw error if consumed by single handler and multiple handlers are found', async () => {
     handlerRegister.addHandler({ handles: TestEvent }, new TestEventHandler());
     handlerRegister.addHandler({ handles: TestEvent }, new TestEventHandler());
 
-    await expect(eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent())).rejects.toThrow();
+    const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent());
+    expect(result.isError()).toBe(true);
+    expect(result.getErrorOrNull()).toBeInstanceOf(MultipleHandlersFoundException);
   });
 
   it('should consume event by multiple handlers', async () => {
@@ -118,7 +125,10 @@ describe('EventBus Event Handling', () => {
   });
 
   it('should throw error if consumed by multiple handlers and no handler is found', async () => {
-    await expect(eventBus.synchronouslyConsumeByMultipleHandlers(new TestEvent())).rejects.toThrow();
+    const results = await eventBus.synchronouslyConsumeByMultipleHandlers(new TestEvent());
+    expect(results).toHaveLength(1);
+    expect(results[0].isError()).toBe(true);
+    expect(results[0].getErrorOrNull()).toBeInstanceOf(HandlerNotFoundException);
   });
 
   // should we return error instead of throwing it
@@ -128,7 +138,9 @@ describe('EventBus Event Handling', () => {
     vi.spyOn(handler, 'handle').mockRejectedValue(new Error('Test error'));
     handlerRegister.addHandler({ handles: TestEvent }, handler);
 
-    await expect(eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent())).rejects.toThrow();
+    const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestEvent());
+    expect(result.isError()).toBe(true);
+    expect(result.getErrorOrNull()).toBeInstanceOf(HandlerThrownException);
   });
 
   // should we return errors instead of throwing them?
@@ -314,14 +326,16 @@ describe('EventBus Task Processing', () => {
     const processor = new SyncTaskProcessor();
     handlerRegister.addHandler({ handles: TestTask }, processor);
     const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestTask());
-    expect(result.result).toBe('sync-result');
+    expect(result.isSuccess()).toBe(true);
+    expect(result.getValueOrThrow()).toBe('sync-result');
   });
 
   it('should retrieve result from async TaskProcessor (singleton, single handler)', async () => {
     const processor = new AsyncTaskProcessor();
     handlerRegister.addHandler({ handles: TestTask }, processor);
     const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestTask());
-    expect(result.result).toBe('async-result');
+    expect(result.isSuccess()).toBe(true);
+    expect(result.getValueOrThrow()).toBe('async-result');
   });
 
   it('should retrieve results from multiple sync TaskProcessors (singleton)', async () => {
@@ -338,8 +352,9 @@ describe('EventBus Task Processing', () => {
     handlerRegister.addHandler({ handles: TestTask }, new ProcessorA());
     handlerRegister.addHandler({ handles: TestTask }, new ProcessorB());
     const results = await eventBus.synchronouslyConsumeByMultipleHandlers(new TestTask());
-    expect(results.map((r) => r.result)).toContain('A');
-    expect(results.map((r) => r.result)).toContain('B');
+    expect(results.every((r) => r.isSuccess())).toBe(true);
+    expect(results.map((r) => r.getValueOrThrow())).toContain('A');
+    expect(results.map((r) => r.getValueOrThrow())).toContain('B');
   });
 
   it('should retrieve results from multiple async TaskProcessors (singleton)', async () => {
@@ -356,10 +371,10 @@ describe('EventBus Task Processing', () => {
     handlerRegister.addHandler({ handles: TestTask }, new ProcessorA());
     handlerRegister.addHandler({ handles: TestTask }, new ProcessorB());
     const results = await eventBus.synchronouslyConsumeByMultipleHandlers(new TestTask());
-    // The results are promises, so we need to await them
-    const awaited = await Promise.all(results.map((r) => r.result));
-    expect(awaited).toContain('A-async');
-    expect(awaited).toContain('B-async');
+    expect(results.every((r) => r.isSuccess())).toBe(true);
+    const values = results.map((r) => r.getValueOrThrow());
+    expect(values).toContain('A-async');
+    expect(values).toContain('B-async');
   });
 
   it('should retrieve result from sync TaskProcessor (scoped)', async () => {
@@ -370,7 +385,8 @@ describe('EventBus Task Processing', () => {
     }
     handlerRegister.addScopedHandler({ handles: TestTask }, ScopedSyncProcessor);
     const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestTask());
-    expect(result.result).toBe('scoped-sync');
+    expect(result.isSuccess()).toBe(true);
+    expect(result.getValueOrThrow()).toBe('scoped-sync');
   });
 
   it('should retrieve result from async TaskProcessor (scoped)', async () => {
@@ -381,7 +397,8 @@ describe('EventBus Task Processing', () => {
     }
     handlerRegister.addScopedHandler({ handles: TestTask }, ScopedAsyncProcessor);
     const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestTask());
-    expect(result.result).toBe('scoped-async');
+    expect(result.isSuccess()).toBe(true);
+    expect(result.getValueOrThrow()).toBe('scoped-async');
   });
 
   it('should throw if sync TaskProcessor throws (singleton)', async () => {
@@ -391,7 +408,9 @@ describe('EventBus Task Processing', () => {
       }
     }
     handlerRegister.addHandler({ handles: TestTask }, new ThrowingProcessor());
-    await expect(eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestTask())).rejects.toThrow('sync error');
+    const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestTask());
+    expect(result.isError()).toBe(true);
+    expect(result.getErrorOrNull()).toBeInstanceOf(HandlerThrownException);
   });
 
   it('should throw if async TaskProcessor throws (singleton)', async () => {
@@ -401,7 +420,9 @@ describe('EventBus Task Processing', () => {
       }
     }
     handlerRegister.addHandler({ handles: TestTask }, new ThrowingAsyncProcessor());
-    await expect(eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestTask())).rejects.toThrow('async error');
+    const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new TestTask());
+    expect(result.isError()).toBe(true);
+    expect(result.getErrorOrNull()).toBeInstanceOf(HandlerThrownException);
   });
 
   it('should call singleton TaskProcessor with the correct task instance', async () => {
@@ -414,14 +435,13 @@ describe('EventBus Task Processing', () => {
   });
 
   it('should call scoped TaskProcessor with the correct task instance', async () => {
+    const spy = vi.fn(() => 'scoped');
     class ScopedProcessor implements TaskProcessor<TestTask, string> {
-      handle = vi.fn(() => 'scoped');
+      handle = spy;
     }
     handlerRegister.addScopedHandler({ handles: TestTask }, ScopedProcessor);
     const task = new TestTask();
     await eventBus.synchronouslyConsumeByStrictlySingleHandler(task);
-    const handlers = await handlerRegister.get({ handlable: task });
-    const scopedInstance = handlers && handlers[0];
-    expect(scopedInstance.handle).toHaveBeenCalledWith(task);
+    expect(spy).toHaveBeenCalledWith(task);
   });
 });
