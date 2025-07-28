@@ -1,29 +1,6 @@
+import { HandlingResult } from '../util';
 import { Event } from './event.interface';
 import { HandlerCallOptions } from './handler-call-options.interface';
-
-/**
- * Result wrapper returned by synchronous handlable consumption methods.
- *
- * Contains the result returned by a handler after processing a handlable.
- * This allows the event bus to return structured results from handler execution.
- *
- * @template TResult - The type of result returned by the handler
- *
- * @example
- * ```typescript
- * const result: HandlingResult<number> = await eventBus.synchronouslyConsumeByStrictlySingleHandler(
- *   new CalculateOrderTotalTask({ items: [...] })
- * );
- * console.log('Order total:', result.result); // Access the actual result
- * ```
- */
-export interface HandlingResult<TResult = unknown> {
-  /**
-   * The result returned by the handler after processing the handlable.
-   * The type depends on what the specific handler returns.
-   */
-  result: TResult;
-}
 
 /**
  * Core interface for the event bus in the event-driven architecture.
@@ -102,8 +79,6 @@ export interface EventBus<TEvent extends Event = Event, TResult = unknown> {
    * @param event - The event to be consumed
    * @param options - Optional handler call options including routing metadata and context
    * @returns Promise that resolves to the result of handler execution
-   * @throws HandlerNotFoundException when no handlers are found for the event
-   * @throws MultipleHandlersFoundException when more than one handler is found
    *
    * @example
    * ```typescript
@@ -129,8 +104,6 @@ export interface EventBus<TEvent extends Event = Event, TResult = unknown> {
    * @param event - The event to be consumed
    * @param options - Optional handler call options including routing metadata and context
    * @returns Promise that resolves to an array of results from all handler executions
-   * @throws HandlerNotFoundException when no handlers are found for the event
-   * @throws MultipleHandlersFailedException when multiple handlers fail during execution
    *
    * @example
    * ```typescript

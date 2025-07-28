@@ -1,11 +1,11 @@
 import {
   HandlerNotFoundException,
-  MultipleHandlersFailedException,
+  HandlerThrownException,
   MultipleHandlersFoundException,
   PublisherNotSetException,
 } from '../exceptions';
 import { EventBus, Handlable, Handler, HandlerCallOptions, HandlerRegister, Publisher, Type } from '../interfaces';
-import { HandlingResult } from '../interfaces/event-bus.interface';
+import { HandlingResult } from '../util/handling-result';
 
 export type EventHandlerType<THandlable extends Handlable = Handlable> = Type<Handler<THandlable>>;
 
@@ -42,10 +42,7 @@ export class BaseEventBus<THandlable extends Handlable = Handlable, TResult = un
     return this._publisher.publishAll(handlables);
   }
 
-  public async synchronouslyConsumeByStrictlySingleHandler(
-    handlable: THandlable,
-    options?: HandlerCallOptions,
-  ): Promise<HandlingResult<TResult>> {
+  public async synchronouslyConsumeByStrictlySingleHandler(handlable: THandlable, options?: HandlerCallOptions) {
     const handlers = await this.handlersRegister.get({
       handlable: handlable,
       context: options?.context,
@@ -53,32 +50,37 @@ export class BaseEventBus<THandlable extends Handlable = Handlable, TResult = un
     });
 
     if (!handlers || handlers.length === 0) {
-      throw new HandlerNotFoundException(this.getHandlableName(handlable), options?.routingMetadata);
-    }
-    if (handlers.length !== 1) {
-      throw new MultipleHandlersFoundException(
-        this.getHandlableName(handlable),
-        options?.routingMetadata,
-        handlers.length,
+      return HandlingResult.error(
+        new HandlerNotFoundException(this.getHandlableName(handlable), options?.routingMetadata),
       );
     }
-    if (options?.context) {
-      return (await handlers[0].handle(handlable, options.context)) as HandlingResult<TResult>;
+    if (handlers.length !== 1) {
+      return HandlingResult.error(
+        new MultipleHandlersFoundException(this.getHandlableName(handlable), options?.routingMetadata, handlers.length),
+      );
     }
-    return (await handlers[0].handle(handlable)) as HandlingResult<TResult>;
+    try {
+      if (options?.context) {
+        return HandlingResult.success((await handlers[0].handle(handlable, options.context)) as TResult);
+      }
+      return HandlingResult.success((await handlers[0].handle(handlable)) as TResult);
+    } catch (error) {
+      return HandlingResult.error(
+        new HandlerThrownException(this.getHandlableName(handlable), options?.routingMetadata, error),
+      );
+    }
   }
 
-  public async synchronouslyConsumeByMultipleHandlers(
-    handlable: THandlable,
-    options?: HandlerCallOptions,
-  ): Promise<HandlingResult<TResult>[]> {
+  public async synchronouslyConsumeByMultipleHandlers(handlable: THandlable, options?: HandlerCallOptions) {
     const handlers = await this.handlersRegister.get({
       handlable: handlable,
       context: options?.context,
       routingMetadata: options?.routingMetadata,
     });
     if (!handlers || handlers.length === 0) {
-      throw new HandlerNotFoundException(this.getHandlableName(handlable), options?.routingMetadata);
+      return [
+        HandlingResult.error(new HandlerNotFoundException(this.getHandlableName(handlable), options?.routingMetadata)),
+      ];
     }
 
     const results = await Promise.allSettled(
@@ -90,21 +92,14 @@ export class BaseEventBus<THandlable extends Handlable = Handlable, TResult = un
       }),
     );
 
-    const failures = results
-      .map((result, index) => ({ result, index }))
-      .filter(({ result }) => result.status === 'rejected')
-      .map(({ result, index }) => ({
-        index,
-        error: (result as PromiseRejectedResult).reason,
-      }));
-
-    if (failures.length > 0) {
-      throw new MultipleHandlersFailedException(failures, this.getHandlableName(handlable), options?.routingMetadata);
-    }
-
-    return handlers.map((handler) => ({
-      result: handler.handle(handlable),
-    })) as HandlingResult<TResult>[];
+    return results.map((result) => {
+      if (result.status === 'rejected') {
+        return HandlingResult.error(
+          new HandlerThrownException(this.getHandlableName(handlable), options?.routingMetadata, result.reason),
+        );
+      }
+      return HandlingResult.success(result.value as TResult);
+    });
   }
 
   private getHandlableName(handlable: THandlable): string {
