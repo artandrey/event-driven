@@ -4,7 +4,7 @@ export class BullMqFanoutEvent<TPayload extends object = object> extends BullMqE
   private readonly _assignedQueueName: string | null = null;
 
   constructor(options: Omit<BullMqEventOptions<TPayload>, 'queueName'> & { queueName?: string }) {
-    // Provide a dummy queue name since fanout events don't use a specific queue
+    // TODO: Consider removing fallback queue name from options
     super({ ...options, queueName: options.queueName || '__fanout__' });
   }
 
