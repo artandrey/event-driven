@@ -1,19 +1,5 @@
 # @event-driven-architecture/bullmq
 
-## 1.0.0
-
-### Patch Changes
-
-- Updated dependencies [f5a3707]
-- Updated dependencies [0a5b943]
-- Updated dependencies [780f2d0]
-- Updated dependencies [d343f80]
-- Updated dependencies [4d4d2e4]
-- Updated dependencies [86ec565]
-- Updated dependencies [33bb1ac]
-- Updated dependencies [6dd6aca]
-  - @event-driven-architecture/core@1.0.0
-
 ## 0.6.0
 
 ### Patch Changes
