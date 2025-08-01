@@ -1,35 +1,137 @@
+import { HandlingResult } from '../util';
 import { Event } from './event.interface';
 import { HandlerCallOptions } from './handler-call-options.interface';
 
-export interface EventBus<TEvent extends Event = Event> {
+/**
+ * Core interface for the event bus in the event-driven architecture.
+ *
+ * The EventBus is responsible for publishing handlables to external systems and
+ * consuming handlables by routing them to appropriate handlers. It supports both
+ * publishing (fire-and-forget) and synchronous consumption (with results).
+ *
+ * **Important**: Before publishing handlables, you must register a publisher using
+ * the `setPublisher()` method. Attempting to publish without a registered publisher
+ * will throw a `PublisherNotSetException`.
+ *
+ * @template TEvent - The event type this bus handles (must extend Event)
+ * @template TResult - The type of results returned by handlers
+ *
+ * @example
+ * ```typescript
+ * // Setup
+ * const eventBus = new BaseEventBus(handlerRegister);
+ * eventBus.setPublisher(myPublisher);
+ *
+ * // Publishing (fire-and-forget)
+ * eventBus.publish(new UserCreatedEvent({ userId: '123' }));
+ * eventBus.publishAll([event1, event2]);
+ *
+ * // Synchronous consumption with results
+ * const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(
+ *   new CalculateOrderTotalTask({ orderId: '123', items: [...] })
+ * );
+ * console.log('Calculated total:', result.result);
+ * ```
+ *
+ * @see {@link Publisher} for publisher interface
+ * @see {@link HandlerRegister} for handler registration
+ * @see {@link HandlingResult} for result structure
+ */
+export interface EventBus<TEvent extends Event = Event, TResult = unknown> {
   /**
-   * Publishes an event.
-   * @param event The event to be published
+   * Publishes an event to the configured publisher.
+   * This is a fire-and-forget operation that forwards the event to external systems.
+   *
+   * @param event - The event to be published
+   * @returns A promise if the publisher is asynchronous, void otherwise
+   * @throws PublisherNotSetException when no publisher is registered
+   *
+   * @example
+   * ```typescript
+   * // Synchronous publisher
+   * eventBus.publish(new UserCreatedEvent({ userId: '123' }));
+   *
+   * // Asynchronous publisher
+   * await eventBus.publish(new UserCreatedEvent({ userId: '123' }));
+   * ```
    */
-  publish<T extends TEvent>(event: T): void;
-  /**
-   * Publishes all events.
-   * @param events The events to be published
-   */
-  publishAll(events: TEvent[]): void;
+  publish<T extends TEvent>(event: T): void | Promise<void>;
 
   /**
-   * Consumes an event by exactly one handler. If there are multiple or none handlers available
-   * for this event type, an error will be thrown. This ensures strict single-handler
-   * consumption of events.
-   * @param event The event to be consumed
-   * @param options Optional handler call options
-   * @throws Error when more than one handler is found for the event
-   * @returns Promise that resolves when the event is handled
+   * Publishes multiple events to the configured publisher.
+   * This is a fire-and-forget operation that forwards all events to external systems.
+   *
+   * @param events - The events to be published
+   * @returns A promise if the publisher is asynchronous, void otherwise
+   * @throws PublisherNotSetException when no publisher is registered
+   *
+   * @example
+   * ```typescript
+   * // Synchronous publisher
+   * eventBus.publishAll([
+   *   new UserCreatedEvent({ userId: '123' }),
+   *   new EmailSentEvent({ userId: '123', email: 'user@example.com' })
+   * ]);
+   *
+   * // Asynchronous publisher
+   * await eventBus.publishAll([
+   *   new UserCreatedEvent({ userId: '123' }),
+   *   new EmailSentEvent({ userId: '123', email: 'user@example.com' })
+   * ]);
+   * ```
    */
-  synchronouslyConsumeByStrictlySingleHandler(event: TEvent, options?: HandlerCallOptions): Promise<void>;
+  publishAll(events: TEvent[]): void | Promise<void>;
+
   /**
-   * Consumes an event by multiple handlers. If there are no handlers available for the event type,
-   * an error will be thrown.
-   * @param event The event to be consumed
-   * @param options Optional handler call options
-   * @throws Error when no handlers are found for the event
-   * @returns Promise that resolves when all handlers are executed
+   * Consumes an event by exactly one handler synchronously and returns the result.
+   *
+   * This method ensures strict single-handler consumption - if there are multiple
+   * or no handlers available for this event type, an error will be thrown.
+   * Unlike publishing, this method executes handlers locally and returns their results.
+   *
+   * @param event - The event to be consumed
+   * @param options - Optional handler call options including routing metadata and context
+   * @returns Promise that resolves to the result of handler execution
+   *
+   * @example
+   * ```typescript
+   * const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(
+   *   new CalculateOrderTotalTask({ orderId: '123', items: [...] }),
+   *   { routingMetadata: { version: 1 }, context: { requestId: 'req-456' } }
+   * );
+   * console.log('Order total:', result.result);
+   * ```
    */
-  synchronouslyConsumeByMultipleHandlers(event: TEvent, options?: HandlerCallOptions): Promise<void>;
+  synchronouslyConsumeByStrictlySingleHandler(
+    event: TEvent,
+    options?: HandlerCallOptions,
+  ): Promise<HandlingResult<TResult>>;
+
+  /**
+   * Consumes an event by multiple handlers synchronously and returns all results.
+   *
+   * This method allows multiple handlers to process the same event. If there are no
+   * handlers available for the event type, an error will be thrown. All handlers
+   * are executed and their results are collected.
+   *
+   * @param event - The event to be consumed
+   * @param options - Optional handler call options including routing metadata and context
+   * @returns Promise that resolves to an array of results from all handler executions
+   *
+   * @example
+   * ```typescript
+   * const results = await eventBus.synchronouslyConsumeByMultipleHandlers(
+   *   new UserCreatedEvent({ userId: '123' }),
+   *   { routingMetadata: { version: 1 } }
+   * );
+   *
+   * results.forEach((result, index) => {
+   *   console.log(`Handler ${index} result:`, result.result);
+   * });
+   * ```
+   */
+  synchronouslyConsumeByMultipleHandlers(
+    event: TEvent,
+    options?: HandlerCallOptions,
+  ): Promise<HandlingResult<TResult>[]>;
 }

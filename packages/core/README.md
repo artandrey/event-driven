@@ -3,16 +3,18 @@
 The main purpose of this package is to provide core functionality for building event-driven architectures in TypeScript applications.
 `EventBus` provides methods to make it possible to extend event routing for specific integrations and enable acknowledgement mechanisms for message brokers.
 
-# Disclaimer
+TStarting from this version, the core package supports not only events but also tasks and any custom "handlable" objects through a generic abstraction system.
 
-This package is still under development and the API may change in further releases.
-Documentation may not cover all features.
+# Navigation
 
 - [Installation](#installation)
+- [Core Concepts](#core-concepts)
 - [Event Handlers](#event-handlers)
+- [Task Processors](#task-processors)
 - [Event Bus](#event-bus)
 - [Core Definitions](#core-definitions)
 - [Scoped Handlers with Context](#scoped-handlers-with-context)
+- [Working with Results](#working-with-results)
 
 ## Installation
 
@@ -32,11 +34,38 @@ pnpm add @event-driven-architecture/core
 bun add @event-driven-architecture/core
 ```
 
+## Core Concepts
+
+The event-driven architecture is built around the concept of **Handlables** - objects that can be processed by handlers. The package provides two main implementations:
+
+- **Events** - Represent things that have happened in your system
+- **Tasks** - Represent work that needs to be done
+
+### Handlable
+
+All processable objects implement the `Handlable` interface:
+
+```typescript
+interface Handlable<TPayload extends object = object> {
+  readonly payload: Readonly<TPayload>;
+}
+```
+
+### Handler
+
+The generic `Handler` interface processes any handlable and optionally returns a result:
+
+```typescript
+interface Handler<THandlable extends Handlable, TResult = unknown, TContext = unknown> {
+  handle(handlable: THandlable, context?: TContext): TResult | Promise<TResult>;
+}
+```
+
 ## Event Handlers
 
 ### Creating Events
 
-First, define your events by implementing the `Event` interface:
+Events implement the `Event` interface, which extends `Handlable`:
 
 ```typescript
 import { Event } from '@event-driven-architecture/core';
@@ -52,7 +81,7 @@ export class UserCreatedEvent implements Event<UserCreatedEventPayload> {
 
 ### Creating Event Handlers
 
-Next, create handlers for your events:
+Event handlers implement the `EventHandler` interface:
 
 ```typescript
 import { EventHandler } from '@event-driven-architecture/core';
@@ -68,23 +97,64 @@ export class UserCreatedEventHandler implements EventHandler<UserCreatedEvent> {
 }
 ```
 
+## Task Processors
+
+### Creating Tasks
+
+Tasks implement the `Task` interface, which also extends `Handlable`:
+
+```typescript
+import { Task } from '@event-driven-architecture/core';
+
+interface CalculateOrderTotalPayload {
+  orderId: string;
+  items: Array<{ price: number; quantity: number }>;
+}
+
+export class CalculateOrderTotalTask implements Task<CalculateOrderTotalPayload> {
+  constructor(public readonly payload: CalculateOrderTotalPayload) {}
+}
+```
+
+### Creating Task Processors
+
+Task processors implement the `TaskProcessor` interface and can return results:
+
+```typescript
+import { TaskProcessor } from '@event-driven-architecture/core';
+
+import { CalculateOrderTotalTask } from './tasks/calculate-order-total.task';
+
+interface OrderTotal {
+  orderId: string;
+  total: number;
+}
+
+export class CalculateOrderTotalProcessor implements TaskProcessor<CalculateOrderTotalTask, OrderTotal> {
+  handle(task: CalculateOrderTotalTask): OrderTotal {
+    const { orderId, items } = task.payload;
+    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    return { orderId, total };
+  }
+}
+```
+
 ### Handler Registration
 
-Handlers are registered through an implementation of `HandlerRegister`. A handler is uniquely identified by two things:
+Handlers are registered through an implementation of `HandlerRegister`. A handler is uniquely identified by:
 
-1. The event class it listens for.
-2. Optional **routing metadata** – a free-form object that lets you differentiate handlers listening to the _same_ event class.
-
-This enables scenarios like multi-tenant routing, versioned events, feature flags, and so on.
+1. The handlable class it processes (using `handles` property)
+2. Optional **routing metadata** – a free-form object for differentiation
 
 ```typescript
 // singleton handler (single instance provided by you)
-handlerRegister.addHandler({ event: UserCreatedEvent, routingMetadata: { v: 1 } }, new UserCreatedEventHandler());
+handlerRegister.addHandler({ handles: UserCreatedEvent, routingMetadata: { v: 1 } }, new UserCreatedEventHandler());
 
 // scoped / transient handler (register by class, a fresh instance created per invocation)
 handlerRegister.addScopedHandler(
-  { event: UserCreatedEvent }, // no metadata – acts as a catch-all
-  UserCreatedEventHandler,
+  { handles: CalculateOrderTotalTask }, // no metadata – acts as a catch-all
+  CalculateOrderTotalProcessor,
 );
 ```
 
@@ -92,16 +162,17 @@ handlerRegister.addScopedHandler(
 
 ### Publisher Registration
 
-**Important**: Before publishing events, you must register a publisher with the EventBus using the `setPublisher()` method. Attempting to publish events without a registered publisher will throw a `PublisherNotSetException`.
+**Important**: Before publishing events or tasks, you must register a publisher with the EventBus using the `setPublisher()` method. Attempting to publish without a registered publisher will throw a `PublisherNotSetException`.
 
-### Publishing Events
+### Publishing Events and Tasks
 
-To publish events, use the `EventBus`:
+To publish handlables, use the `EventBus`:
 
 ```typescript
 import { EventBus } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
+import { CalculateOrderTotalTask } from './tasks/calculate-order-total.task';
 
 class UserService {
   constructor(private readonly eventBus: EventBus) {}
@@ -113,16 +184,40 @@ class UserService {
     this.eventBus.publish(new UserCreatedEvent({ userId }));
   }
 }
+
+class OrderService {
+  constructor(private readonly eventBus: EventBus) {}
+
+  processOrder(orderId: string): void {
+    // Publish task
+    this.eventBus.publish(
+      new CalculateOrderTotalTask({
+        orderId,
+        items: [{ price: 10, quantity: 2 }],
+      }),
+    );
+  }
+}
 ```
 
 ### Setting Up a Publisher
 
-To use external message brokers, you need to set up a publisher:
+To use external message brokers, you need to set up a publisher that implements the `Publisher` interface:
 
 ```typescript
-import { EventBus } from '@event-driven-architecture/core';
+import { EventBus, Handlable, Publisher } from '@event-driven-architecture/core';
 
-import { MyCustomPublisher } from './my-custom-publisher';
+class MyCustomPublisher implements Publisher {
+  publish<T extends Handlable>(handlable: T): void {
+    // Send to message broker
+    console.log('Publishing:', handlable);
+  }
+
+  publishAll(handlables: Handlable[]): void {
+    // Send all to message broker
+    console.log('Publishing all:', handlables);
+  }
+}
 
 class AppBootstrap {
   constructor(
@@ -131,30 +226,92 @@ class AppBootstrap {
   ) {}
 
   initialize() {
-    // Set the publisher for the event bus using the dedicated method
+    // Set the publisher for the event bus
     this.eventBus.setPublisher(this.customPublisher);
   }
 }
 ```
 
-### Consuming Events Synchronously
+## Working with Results
 
-When an event is consumed, you can (optionally) provide the same routing metadata to target specific handlers:
+### Consuming Events and Tasks Synchronously
+
+When processing handlables synchronously, the EventBus returns `HandlingResult` objects that encapsulate both successful results and errors using the Result pattern. This eliminates the need to catch exceptions and provides a more predictable error handling experience:
 
 ```typescript
-await eventBus.synchronouslyConsumeByStrictlySingleHandler(new UserCreatedEvent({ userId: '123' }), {
+// Single handler - returns HandlingResult<TResult>
+const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(
+  new CalculateOrderTotalTask({ orderId: '123', items: [{ price: 10, quantity: 2 }] }),
+  { routingMetadata: { v: 1 } },
+);
+
+// Check if the operation was successful
+if (result.isSuccess()) {
+  console.log('Order total:', result.getValueOrThrow().total);
+} else {
+  console.error('Error processing task:', result.getErrorOrNull());
+}
+
+// Multiple handlers - returns HandlingResult<TResult>[]
+const results = await eventBus.synchronouslyConsumeByMultipleHandlers(new UserCreatedEvent({ userId: '123' }), {
   routingMetadata: { v: 1 },
 });
 
-await eventBus.synchronouslyConsumeByMultipleHandlers(new UserCreatedEvent({ userId: '123' }), {
-  routingMetadata: { v: 1 },
+results.forEach((result) => {
+  if (result.isSuccess()) {
+    console.log('Handler result:', result.getValueOrThrow());
+  } else {
+    console.error('Handler failed:', result.getErrorOrNull());
+  }
 });
 ```
 
-When consuming events, you can also pass a request-scoped context alongside routing metadata:
+### Error Handling with HandlingResult
+
+The `HandlingResult` class provides several methods for working with results and errors:
 
 ```typescript
-await eventBus.synchronouslyConsumeByStrictlySingleHandler(new UserCreatedEvent({ userId: '123' }), {
+const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new SomeTask());
+
+// Check result status
+if (result.isSuccess()) {
+  // Safe to access value
+  const value = result.getValueOrThrow();
+} else if (result.isError()) {
+  // Handle error case
+  const error = result.getErrorOrNull();
+  console.error('Processing failed:', error);
+}
+
+// Alternative: Get value or null (doesn't throw)
+const valueOrNull = result.getValueOrNull();
+if (valueOrNull !== null) {
+  // Process successful result
+}
+
+// Get value or throw the contained error
+try {
+  const value = result.getValueOrThrow();
+  // Process value
+} catch (error) {
+  // Handle the original error that caused the failure
+}
+```
+
+### Common Error Types
+
+The event bus can return the following error types in failed `HandlingResult` objects:
+
+- **`HandlerNotFoundException`** - No handlers found for the given handlable and routing metadata
+- **`MultipleHandlersFoundException`** - Multiple handlers found when exactly one was expected
+- **`HandlerThrownException`** - A handler threw an exception during execution (contains the original error)
+
+### Consuming with Context
+
+When consuming handlables, you can pass a request-scoped context alongside routing metadata:
+
+```typescript
+const result = await eventBus.synchronouslyConsumeByStrictlySingleHandler(new UserCreatedEvent({ userId: '123' }), {
   routingMetadata: { v: 1 },
   context: { requestId: '456' },
 });
@@ -164,24 +321,35 @@ await eventBus.synchronouslyConsumeByStrictlySingleHandler(new UserCreatedEvent(
 
 The event-driven module provides several key definitions:
 
-**Event (Event)** - Base interface for all events. Events are simple data structures that contain information about what happened in your application.
+**Handlable** - Base interface for all processable objects. Contains a read-only payload with information.
 
-**Event Handler (EventHandler)** - Interface for event handlers. Handlers contain the business logic that should be executed when a specific event occurs.
+**Event** - Specialization of Handlable that represents things that have happened in your application.
 
-**Event Bus (EventBus)** - Core interface for the event bus. The event bus is responsible for publishing events and routing them to the appropriate handlers.
+**Task** - Specialization of Handlable that represents work that needs to be done.
 
-**Event Publisher (EventPublisher)** - Interface for publishing events to external systems. Publishers are responsible for sending events to external message brokers or other systems. Publishers must be registered with the EventBus using `setPublisher()` before publishing events.
+**Handler** - Generic interface for processing handlables. Can optionally return results and receive context.
 
-**Handler Register (HandlerRegister)** - Interface for the handler register service. Responsible for registering handlers and retrieving handler signatures.
+**Event Handler (EventHandler)** - Specialization of Handler for processing events. Typically returns void.
+
+**Task Processor (TaskProcessor)** - Specialization of Handler for processing tasks. Can return results.
+
+**Event Bus (EventBus)** - Core interface for the event bus. Responsible for publishing handlables and routing them to appropriate handlers.
+
+**Publisher** - Interface for publishing handlables to external systems. Must be registered with the EventBus using `setPublisher()`.
+
+**Handler Register (HandlerRegister)** - Interface for registering handlers and retrieving handler signatures.
+
+**HandlingResult** - Result wrapper that encapsulates both successful results and errors from synchronous handler execution. Uses the Result pattern to eliminate exception throwing and provide predictable error handling. Contains methods like `isSuccess()`, `isError()`, `getValueOrThrow()`, and `getErrorOrNull()`.
 
 ## Scoped Handlers with Context
 
 You can create scoped handlers that receive context information:
 
 ```typescript
-import { EventHandler, EventHandlerScope } from '@event-driven-architecture/core';
+import { EventHandler, TaskProcessor } from '@event-driven-architecture/core';
 
 import { UserCreatedEvent } from './events/user-created.event';
+import { CalculateOrderTotalTask } from './tasks/calculate-order-total.task';
 
 interface EventContext {
   requestId: string;
@@ -197,19 +365,65 @@ export class ScopedUserCreatedEventHandler implements EventHandler<UserCreatedEv
     console.log(`User created with ID: ${userId} in request: ${context.requestId}`);
   }
 }
+
+export class ScopedCalculateOrderTotalProcessor
+  implements TaskProcessor<CalculateOrderTotalTask, OrderTotal, EventContext>
+{
+  handle(task: CalculateOrderTotalTask, context: EventContext): OrderTotal {
+    console.log('Processing order in request:', context.requestId);
+
+    const { orderId, items } = task.payload;
+    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    return { orderId, total };
+  }
+}
 ```
 
-When consuming events, you can pass context:
+## Advanced Generics Usage
+
+The core module uses generics extensively for type safety. Here's how to leverage them:
+
+### Typing EventBus Results
+
+You can specify the expected result type when creating an EventBus instance:
 
 ```typescript
-await eventBus.synchronouslyConsumeByStrictlySingleHandler(new UserCreatedEvent({ userId: '123' }), {
-  context: { requestId: '456' },
-});
+import { BaseEventBus, EventBus, HandlingResult } from '@event-driven-architecture/core';
+
+interface ProcessingValue {
+  // ... typed structure
+}
+
+const eventBus: EventBus<MyEvent, ProcessingValue> = new BaseEventBus<MyEvent, ProcessingValue>(handlerRegister);
+
+// When consuming:
+const result: HandlingResult<ProcessingValue> = await eventBus.synchronouslyConsumeByStrictlySingleHandler(myEvent);
+
+if (result.isSuccess()) {
+  const value: ProcessingValue = result.getValueOrThrow();
+}
 ```
 
-## Putting it all together – Bootstrapping a minimal in-memory event system
+### Generic Handlers
 
-The snippet below mirrors the setup used in the test suite and shows how the main pieces plug together.
+Handlers can be typed for specific payloads and results:
+
+```typescript
+class TypedHandler implements Handler<MyEvent, ProcessingValue> {
+  handle(event: MyEvent): ProcessingValue {
+    return {
+      // expected structure
+    };
+  }
+}
+```
+
+This ensures compile-time checks for integrations.
+
+## Putting it all together – Bootstrapping a minimal in-memory system
+
+The snippet below shows how the main pieces plug together with the new API:
 
 ```typescript
 import {
@@ -218,8 +432,11 @@ import {
   Event,
   EventBus,
   EventHandler,
-  EventPublisher,
+  Handlable,
   HandlerRegister,
+  Publisher,
+  Task,
+  TaskProcessor,
 } from '@event-driven-architecture/core';
 
 // 1. Define an event
@@ -227,34 +444,65 @@ export class UserCreatedEvent implements Event<{ userId: string }> {
   constructor(public readonly payload: { userId: string }) {}
 }
 
-// 2. Implement a handler
+// 2. Define a task
+export class CalculateOrderTotalTask implements Task<{ orderId: string; total: number }> {
+  constructor(public readonly payload: { orderId: string; total: number }) {}
+}
+
+// 3. Implement handlers
 class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
   handle(event: UserCreatedEvent): void {
     console.log('User created (v=1):', event.payload.userId);
   }
 }
 
-// 3. Optional: implement a publisher (here we stub it)
-const inMemoryPublisher: EventPublisher = {
-  publish: (event) => console.log('Published', event),
-  publishAll: (events) => console.log('Published many', events),
+class OrderTotalProcessor implements TaskProcessor<CalculateOrderTotalTask, { calculatedTotal: number }> {
+  handle(task: CalculateOrderTotalTask): { calculatedTotal: number } {
+    console.log('Calculating total for order:', task.payload.orderId);
+    return { calculatedTotal: task.payload.total * 1.1 }; // Add 10% tax
+  }
+}
+
+// 4. Implement a publisher
+const inMemoryPublisher: Publisher = {
+  publish: (handlable) => console.log('Published', handlable),
+  publishAll: (handlables) => console.log('Published many', handlables),
 };
 
-// 4. Wire everything together
+// 5. Wire everything together
 const register: HandlerRegister = new BaseHandlerRegister();
-register.addHandler({ event: UserCreatedEvent, routingMetadata: { v: 1 } }, new UserCreatedHandler());
+register.addHandler({ handles: UserCreatedEvent, routingMetadata: { v: 1 } }, new UserCreatedHandler());
+register.addHandler({ handles: CalculateOrderTotalTask }, new OrderTotalProcessor());
 
 const eventBus = new BaseEventBus(register);
 eventBus.setPublisher(inMemoryPublisher);
 
-// 5. Emit and consume an event
+// 6. Emit and consume handlables
 const event = new UserCreatedEvent({ userId: '1' });
+const task = new CalculateOrderTotalTask({ orderId: 'order-1', total: 100 });
 
-await eventBus.synchronouslyConsumeByStrictlySingleHandler(event, {
+// Consume event (returns void in HandlingResult)
+const eventResult = await eventBus.synchronouslyConsumeByStrictlySingleHandler(event, {
   routingMetadata: { v: 1 },
 });
-// log: User created (v=1): 1 from UserCreatedHandler
 
-// Or publish to forward it to the configured publisher
+if (eventResult.isSuccess()) {
+  // log: User created (v=1): 1
+  console.log('Event processed successfully');
+} else {
+  console.error('Event processing failed:', eventResult.getErrorOrNull());
+}
+
+// Consume task (returns calculated result in HandlingResult)
+const taskResult = await eventBus.synchronouslyConsumeByStrictlySingleHandler(task);
+
+if (taskResult.isSuccess()) {
+  console.log('Task result:', taskResult.getValueOrThrow().calculatedTotal); // 110
+} else {
+  console.error('Task processing failed:', taskResult.getErrorOrNull());
+}
+
+// Or publish to forward to the configured publisher
 eventBus.publish(event);
+eventBus.publish(task);
 ```

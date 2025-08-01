@@ -1,70 +1,108 @@
-import { HandlerNotFoundException, MultipleHandlersFoundException, PublisherNotSetException } from '../exceptions';
-import { defaultGetEventName } from '../helpers/default-get-event-name';
-import { Event, EventBus, EventHandler, EventPublisher, HandlerRegister, Type } from '../interfaces';
-import { HandlerCallOptions } from '../interfaces/handler-call-options.interface';
+import {
+  HandlerNotFoundException,
+  HandlerThrownException,
+  MultipleHandlersFoundException,
+  PublisherNotSetException,
+} from '../exceptions';
+import { EventBus, Handlable, Handler, HandlerCallOptions, HandlerRegister, Publisher, Type } from '../interfaces';
+import { HandlingResult } from '../util/handling-result';
 
-export type EventHandlerType<TEvent extends Event = Event> = Type<EventHandler<TEvent>>;
+export type EventHandlerType<THandlable extends Handlable = Handlable> = Type<Handler<THandlable>>;
 
-export class BaseEventBus<TEvent extends Event = Event> implements EventBus<TEvent> {
-  protected _publisher: EventPublisher<TEvent> | null = null;
+export class BaseEventBus<THandlable extends Handlable = Handlable, TResult = unknown>
+  implements EventBus<THandlable, TResult>
+{
+  protected _publisher: Publisher<THandlable> | null = null;
 
-  constructor(private readonly handlersRegister: HandlerRegister<EventHandler<TEvent>>) {}
+  constructor(private readonly handlersRegister: HandlerRegister<Handler<THandlable>>) {}
 
-  get publisher(): EventPublisher<TEvent> {
+  get publisher(): Publisher<THandlable> {
     if (!this._publisher) {
       throw new PublisherNotSetException();
     }
     return this._publisher;
   }
 
-  public setPublisher(publisher: EventPublisher<TEvent>) {
+  public setPublisher(publisher: Publisher<THandlable>) {
     this._publisher = publisher;
   }
 
-  public publish<T extends TEvent>(event: T) {
+  public publish<T extends THandlable>(handlable: T) {
     if (!this._publisher) {
       throw new PublisherNotSetException();
     }
-    return this._publisher.publish(event);
+    return this._publisher.publish(handlable);
   }
 
-  public publishAll<T extends TEvent>(events: T[]) {
+  public publishAll<T extends THandlable>(handlables: T[]) {
     if (!this._publisher) {
       throw new PublisherNotSetException();
     }
 
-    return this._publisher.publishAll(events);
+    return this._publisher.publishAll(handlables);
   }
 
-  protected getEventName(event: TEvent) {
-    return defaultGetEventName(event);
-  }
-
-  public async synchronouslyConsumeByStrictlySingleHandler(event: TEvent, options?: HandlerCallOptions): Promise<void> {
+  public async synchronouslyConsumeByStrictlySingleHandler(handlable: THandlable, options?: HandlerCallOptions) {
     const handlers = await this.handlersRegister.get({
-      event,
+      handlable: handlable,
       context: options?.context,
       routingMetadata: options?.routingMetadata,
     });
 
     if (!handlers || handlers.length === 0) {
-      throw new HandlerNotFoundException();
+      return HandlingResult.error(
+        new HandlerNotFoundException(this.getHandlableName(handlable), options?.routingMetadata),
+      );
     }
     if (handlers.length !== 1) {
-      throw new MultipleHandlersFoundException();
+      return HandlingResult.error(
+        new MultipleHandlersFoundException(this.getHandlableName(handlable), options?.routingMetadata, handlers.length),
+      );
     }
-    return handlers[0].handle(event);
+    try {
+      if (options?.context) {
+        return HandlingResult.success((await handlers[0].handle(handlable, options.context)) as TResult);
+      }
+      return HandlingResult.success((await handlers[0].handle(handlable)) as TResult);
+    } catch (error) {
+      return HandlingResult.error(
+        new HandlerThrownException(this.getHandlableName(handlable), options?.routingMetadata, error),
+      );
+    }
   }
 
-  public async synchronouslyConsumeByMultipleHandlers(event: TEvent, options?: HandlerCallOptions): Promise<void> {
+  public async synchronouslyConsumeByMultipleHandlers(handlable: THandlable, options?: HandlerCallOptions) {
     const handlers = await this.handlersRegister.get({
-      event,
+      handlable: handlable,
       context: options?.context,
       routingMetadata: options?.routingMetadata,
     });
     if (!handlers || handlers.length === 0) {
-      throw new HandlerNotFoundException();
+      return [
+        HandlingResult.error(new HandlerNotFoundException(this.getHandlableName(handlable), options?.routingMetadata)),
+      ];
     }
-    return handlers.forEach((handler) => handler.handle(event));
+
+    const results = await Promise.allSettled(
+      handlers.map((handler) => {
+        if (options?.context) {
+          return handler.handle(handlable, options.context);
+        }
+        return handler.handle(handlable);
+      }),
+    );
+
+    return results.map((result) => {
+      if (result.status === 'rejected') {
+        return HandlingResult.error(
+          new HandlerThrownException(this.getHandlableName(handlable), options?.routingMetadata, result.reason),
+        );
+      }
+      return HandlingResult.success(result.value as TResult);
+    });
+  }
+
+  private getHandlableName(handlable: THandlable): string {
+    return handlable.constructor.name;
   }
 }
