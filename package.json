@@ -40,7 +40,7 @@
     "@nx/js": "^21.2.1",
     "@nx/rollup": "21.2.1",
     "@nx/vite": "^21.2.1",
-    "@nx/web": "21.2.1",
+    "@nx/web": "21.3.10",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/node": "^22.15.3",
     "@vitest/ui": "^3.0.0",
