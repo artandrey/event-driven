@@ -44,10 +44,12 @@ export class BullMqEventConsumerService<THandlable extends BullMqTask = BullMqTa
 
   private handleJob: Processor = async (job: Job, token?: string) => {
     const event = this.mapJobToEvent(job);
-    await this.eventBus.synchronouslyConsumeByStrictlySingleHandler(event, {
+    const result = await this.eventBus.synchronouslyConsumeByStrictlySingleHandler(event, {
       context: this.createBullMqHandlerContext(job, token),
       routingMetadata: mapBullMqEventToRoutingMetadata(event),
     });
+
+    return result.getValueOrThrow();
   };
 
   private mapJobToEvent(job: Job | FlowJob): THandlable {
