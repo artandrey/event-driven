@@ -1,8 +1,8 @@
 import { JobsOptions } from 'bullmq';
 
-import { BullMqFlowEvent } from '../../events';
-import { BullMqFanoutEvent } from '../../events/bull-mq-fanout.event';
-import { BullMqEvent } from '../../events/bull-mq.event';
+import { BullMqFlowTask } from '../../tasks';
+import { BullMqFanoutTask } from '../../tasks/bull-mq-fanout.task';
+import { BullMqTask } from '../../tasks/bull-mq.task';
 import { FanoutRouter } from '../fanout-router/fanout-router';
 import { FlowRegisterService } from '../register';
 import { QueueRegisterService } from '../register/queue-register.service';
@@ -29,12 +29,12 @@ export class BulkBullMqEventPublisher extends BaseBullMQEventPublisher {
     super(queueRegisterService, flowRegisterService, fanoutRouter);
   }
 
-  publishAll<E extends BullMqEvent<object>>(events: E[]): void {
+  publishAll<E extends BullMqTask<object>>(events: E[]): void {
     const eventTypeEventsMap = events.reduce(
       (acc, event) => {
-        if (event instanceof BullMqFanoutEvent) {
+        if (event instanceof BullMqFanoutTask) {
           acc.fanout.push(event);
-        } else if (event instanceof BullMqFlowEvent) {
+        } else if (event instanceof BullMqFlowTask) {
           acc.flow.push(event);
         } else {
           acc.queue.push(event);
@@ -42,9 +42,9 @@ export class BulkBullMqEventPublisher extends BaseBullMQEventPublisher {
         return acc;
       },
       {
-        fanout: [] as BullMqFanoutEvent[],
-        flow: [] as BullMqFlowEvent[],
-        queue: [] as BullMqEvent[],
+        fanout: [] as BullMqFanoutTask[],
+        flow: [] as BullMqFlowTask[],
+        queue: [] as BullMqTask[],
       },
     );
 
@@ -52,11 +52,11 @@ export class BulkBullMqEventPublisher extends BaseBullMQEventPublisher {
     this.publishQueueEvents(eventTypeEventsMap.queue, eventTypeEventsMap.fanout);
   }
 
-  private publishFlowEvents(events: BullMqFlowEvent[]): void {
+  private publishFlowEvents(events: BullMqFlowTask[]): void {
     const eventFlowNameEventsMap = events.reduce((acc, event) => {
       acc.set(event.$flowName, [...(acc.get(event.$flowName) || []), event]);
       return acc;
-    }, new Map<string | null, BullMqFlowEvent[]>());
+    }, new Map<string | null, BullMqFlowTask[]>());
 
     for (const events of eventFlowNameEventsMap.values()) {
       const flowProducer = this.getCorrespondFlowProducer(events[0]);
@@ -64,7 +64,7 @@ export class BulkBullMqEventPublisher extends BaseBullMQEventPublisher {
     }
   }
 
-  publishQueueEvents(queueEvents: BullMqEvent<object>[], fanoutEvents: BullMqFanoutEvent<object>[]): void {
+  publishQueueEvents(queueEvents: BullMqTask<object>[], fanoutEvents: BullMqFanoutTask<object>[]): void {
     const queueQueuePublishableMap = new Map<string, QueuePublishable[]>();
 
     queueEvents.forEach((event) => {

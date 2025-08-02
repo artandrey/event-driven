@@ -4,19 +4,23 @@ This package provides BullMQ integration for the [@event-driven-architecture/cor
 
 ## Key Principles
 
-- **Event Agnostic Handlers:** Your application layer (event handlers) remains agnostic to the underlying message queue. All BullMQ-specific details are encapsulated in the event class.
-- **Separation of Concerns:** Define queue, job options, and event names in the event class. Handlers only care about the event payload.
+- **Event Agnostic Handlers:** Your application layer (event handlers) remains agnostic to the underlying message queue. All BullMQ-specific details are encapsulated in the task class.
+- **Separation of Concerns:** Define queue, job options, and event names in the task class. Handlers only care about the event payload.
+
+## Naming Convention
+
+> **Important:** While we use the term "task" for the base classes (`BullMqTask`, `BullMqFlowTask`, etc.) for semantic clarity and alignment with BullMQ's job-based terminology, classes that extend these task base classes may still be referred to as "events" throughout the documentation and in your application code. For example, `UserCreatedTask extends BullMqTask` can still be conceptually called a "UserCreated event" since it represents an event that occurred in your domain. The "task" terminology specifically refers to the underlying infrastructure classes that handle the BullMQ job processing.
 
 ---
 
 - [Installation](#installation)
-- [Defining Events](#defining-events)
+- [Defining Tasks](#defining-tasks)
 - [Creating Event Handlers](#creating-event-handlers)
 - [Registering Queues and Handlers](#registering-queues-and-handlers)
 - [Publishing Events](#publishing-events)
   - [Atomic vs Bulk Publishing](#atomic-vs-bulk-publishing)
 - [Fanout Routing](#fanout-routing)
-  - [Defining Fanout Events](#defining-fanout-events)
+  - [Defining Fanout Tasks](#defining-fanout-tasks)
   - [Configuring the Fanout Router](#configuring-the-fanout-router)
     - [Per-Queue Job Options](#per-queue-job-options)
   - [Publishing Fanout Events](#publishing-fanout-events)
@@ -49,16 +53,16 @@ bun add @event-driven-architecture/bullmq bullmq @event-driven-architecture/core
 
 ---
 
-## Defining Events
+## Defining Tasks
 
-All BullMQ-specific details (queue name, event name, job options) are defined in the event class. This keeps handlers and the rest of your application agnostic to the transport layer.
+All BullMQ-specific details (queue name, event name, job options) are defined in the task class. This keeps handlers and the rest of your application agnostic to the transport layer.
 
 ```typescript
-import { BullMqEvent } from '@event-driven-architecture/bullmq';
+import { BullMqTask } from '@event-driven-architecture/bullmq';
 
 const QUEUE_NAME = 'user-queue';
 
-export class UserCreatedEvent extends BullMqEvent<{ userId: string }> {
+export class UserCreatedTask extends BullMqTask<{ userId: string }> {
   constructor(payload: { userId: string }) {
     super({
       queueName: QUEUE_NAME,
@@ -79,10 +83,10 @@ Handlers are completely decoupled from BullMQ. They only depend on the event typ
 ```typescript
 import { EventHandler } from '@event-driven-architecture/core';
 
-import { UserCreatedEvent } from './events/user-created.event';
+import { UserCreatedTask } from './tasks/user-created.task';
 
-export class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
-  handle(event: UserCreatedEvent) {
+export class UserCreatedHandler implements EventHandler<UserCreatedTask> {
+  handle(event: UserCreatedTask) {
     // Business logic, unaware of MQ details
     console.log('User created:', event.payload.userId);
   }
@@ -93,8 +97,8 @@ export class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
 
 ## Registering Queues and Handlers
 
-Queues still need to be registered explicitly, but **events are now discovered automatically from your handler signatures**.  
-Use the `HandlesBullMq` helper to bind an event class to its handler; the consumer service will take care of registering the event class. No manual `eventsRegisterService.register(...)` calls are required anymore.
+Queues still need to be registered explicitly, but **tasks are now discovered automatically from your handler signatures**.  
+Use the `HandlesBullMq` helper to bind a task class to its handler; the consumer service will take care of registering the task class. No manual `eventsRegisterService.register(...)` calls are required anymore.
 
 ```typescript
 import {
@@ -107,8 +111,8 @@ import {
 import { BaseHandlerRegister } from '@event-driven-architecture/core';
 import { Queue } from 'bullmq';
 
-import { UserCreatedEvent } from './events/user-created.event';
 import { UserCreatedHandler } from './handlers/user-created.handler';
+import { UserCreatedTask } from './tasks/user-created.task';
 
 // 1  Create the required register services
 const eventsRegisterService = new EventsRegisterService();
@@ -121,8 +125,8 @@ const workerService = new WorkerService(workerRegisterService);
 const userQueue = new Queue('user-queue', { connection: { host: 'localhost', port: 6379 } });
 queueRegisterService.add(userQueue);
 
-// 3  Bind the handler to the event
-handlerRegisterService.addHandler(HandlesBullMq(UserCreatedEvent), new UserCreatedHandler());
+// 3  Bind the handler to the task
+handlerRegisterService.addHandler(HandlesBullMq(UserCreatedTask), new UserCreatedHandler());
 ```
 
 ---
@@ -143,7 +147,7 @@ import { AtomicBullMqEventPublisher, FanoutRouter } from '@event-driven-architec
 
 const fanoutRouter = new FanoutRouter();
 const eventPublisher = new AtomicBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);
-const event = new UserCreatedEvent({ userId: '123' });
+const event = new UserCreatedTask({ userId: '123' });
 eventPublisher.publish(event);
 ```
 
@@ -154,7 +158,7 @@ import { BulkBullMqEventPublisher, FanoutRouter } from '@event-driven-architectu
 
 const fanoutRouter = new FanoutRouter();
 const bulkPublisher = new BulkBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);
-bulkPublisher.publishAll([new UserCreatedEvent({ userId: '1' }), new UserCreatedEvent({ userId: '2' })]);
+bulkPublisher.publishAll([new UserCreatedTask({ userId: '1' }), new UserCreatedTask({ userId: '2' })]);
 ```
 
 ---
@@ -163,12 +167,12 @@ bulkPublisher.publishAll([new UserCreatedEvent({ userId: '1' }), new UserCreated
 
 Fanout routing allows you to publish a single event to multiple queues simultaneously. This is useful for implementing patterns like event broadcasting, where multiple services need to process the same event independently.
 
-### Defining Fanout Events
+### Defining Fanout Tasks
 
-Fanout events extend `BullMqFanoutEvent` instead of `BullMqEvent`. Unlike regular events, fanout events don't specify a single queue name since they will be routed to multiple queues based on the configured routes.
+Fanout tasks extend `BullMqFanoutTask` instead of `BullMqTask`. Unlike regular tasks, fanout tasks don't specify a single queue name since they will be routed to multiple queues based on the configured routes.
 
 ```typescript
-import { BullMqFanoutEvent } from '@event-driven-architecture/bullmq';
+import { BullMqFanoutTask } from '@event-driven-architecture/bullmq';
 
 interface NotificationPayload {
   userId: string;
@@ -176,7 +180,7 @@ interface NotificationPayload {
   type: 'email' | 'sms' | 'push';
 }
 
-export class NotificationEvent extends BullMqFanoutEvent<NotificationPayload> {
+export class NotificationTask extends BullMqFanoutTask<NotificationPayload> {
   constructor(payload: NotificationPayload) {
     super({
       name: 'notification-sent',
@@ -187,11 +191,11 @@ export class NotificationEvent extends BullMqFanoutEvent<NotificationPayload> {
 }
 ```
 
-When consumed, fanout events provide access to the queue they were actually processed on via the `$assignedQueueName` property:
+When consumed, fanout tasks provide access to the queue they were actually processed on via the `$assignedQueueName` property:
 
 ```typescript
-export class NotificationHandler implements IEventHandler<NotificationEvent, BullMqHandlerContext> {
-  handle(event: NotificationEvent, context: BullMqHandlerContext) {
+export class NotificationHandler implements IEventHandler<NotificationTask, BullMqHandlerContext> {
+  handle(event: NotificationTask, context: BullMqHandlerContext) {
     console.log('Processing notification on queue:', event.$assignedQueueName);
     console.log('Notification payload:', event.payload);
   }
@@ -200,7 +204,7 @@ export class NotificationHandler implements IEventHandler<NotificationEvent, Bul
 
 ### Configuring the Fanout Router
 
-The `FanoutRouter` is responsible for mapping fanout events to their target queues. You can configure routes either during construction or by adding them dynamically.
+The `FanoutRouter` is responsible for mapping fanout tasks to their target queues. You can configure routes either during construction or by adding them dynamically.
 
 #### Option 1: Configure Routes During Construction
 
@@ -210,13 +214,13 @@ import { FanoutRouter } from '@event-driven-architecture/bullmq';
 const fanoutRouter = new FanoutRouter({
   routes: [
     {
-      event: NotificationEvent,
+      event: NotificationTask,
       route: {
         queues: [{ name: 'email-queue' }, { name: 'sms-queue' }, { name: 'push-queue' }],
       },
     },
     {
-      event: UserActivityEvent,
+      event: UserActivityTask,
       route: {
         queues: [{ name: 'analytics-queue' }, { name: 'audit-queue' }],
       },
@@ -232,12 +236,12 @@ import { FanoutRouter } from '@event-driven-architecture/bullmq';
 
 const fanoutRouter = new FanoutRouter();
 
-// Add routes for different events
-fanoutRouter.addRoute(NotificationEvent, {
+// Add routes for different tasks
+fanoutRouter.addRoute(NotificationTask, {
   queues: [{ name: 'email-queue' }, { name: 'sms-queue' }, { name: 'push-queue' }],
 });
 
-fanoutRouter.addRoute(UserActivityEvent, {
+fanoutRouter.addRoute(UserActivityTask, {
   queues: [{ name: 'analytics-queue' }, { name: 'audit-queue' }],
 });
 ```
@@ -251,21 +255,21 @@ import { FanoutRouter } from '@event-driven-architecture/bullmq';
 
 const fanoutRouter = new FanoutRouter();
 
-fanoutRouter.addRoute(NotificationEvent, {
+fanoutRouter.addRoute(NotificationTask, {
   queues: [
     {
       name: 'email-queue',
       jobOptions: { attempts: 5, delay: 2000 },
-      jobOptionsStrategy: 'override', // merge with event's options
+      jobOptionsStrategy: 'override', // merge with task's options
     },
     {
       name: 'sms-queue',
       jobOptions: { attempts: 3, priority: 10 },
-      jobOptionsStrategy: 'rewrite', // replace event's options completely
+      jobOptionsStrategy: 'rewrite', // replace task's options completely
     },
     {
       name: 'push-queue',
-      // No custom options - uses event's default options
+      // No custom options - uses task's default options
     },
   ],
 });
@@ -273,24 +277,24 @@ fanoutRouter.addRoute(NotificationEvent, {
 
 **Job Options Strategies:**
 
-- **`override`**: Merges the event's job options with the per-queue options. Per-queue options take precedence for conflicting properties.
-- **`rewrite`**: Completely replaces the event's job options with the per-queue options.
+- **`override`**: Merges the task's job options with the per-queue options. Per-queue options take precedence for conflicting properties.
+- **`rewrite`**: Completely replaces the task's job options with the per-queue options.
 
 **Example with different strategies:**
 
 ```typescript
-// Event has: { attempts: 3, delay: 1000, priority: 1 }
+// Task has: { attempts: 3, delay: 1000, priority: 1 }
 // Queue config: { attempts: 5, priority: 10, jobOptionsStrategy: 'override' }
 // Result: { attempts: 5, delay: 1000, priority: 10 }
 
-// Event has: { attempts: 3, delay: 1000, priority: 1 }
+// Task has: { attempts: 3, delay: 1000, priority: 1 }
 // Queue config: { attempts: 5, priority: 10, jobOptionsStrategy: 'rewrite' }
 // Result: { attempts: 5, priority: 10 }
 ```
 
 ### Publishing Fanout Events
 
-Fanout events are published using the same publishers as regular events. The publisher will automatically detect fanout events and route them to all configured queues.
+Fanout events are published using the same publishers as regular events. The publisher will automatically detect fanout tasks and route them to all configured queues.
 
 #### Using Atomic Publisher
 
@@ -298,7 +302,7 @@ Fanout events are published using the same publishers as regular events. The pub
 import { AtomicBullMqEventPublisher, FanoutRouter } from '@event-driven-architecture/bullmq';
 
 const fanoutRouter = new FanoutRouter();
-fanoutRouter.addRoute(NotificationEvent, {
+fanoutRouter.addRoute(NotificationTask, {
   queues: [{ name: 'email-queue' }, { name: 'sms-queue' }, { name: 'push-queue' }],
 });
 
@@ -306,7 +310,7 @@ const publisher = new AtomicBullMqEventPublisher(queueRegisterService, flowRegis
 
 // This will create jobs in all three queues
 publisher.publish(
-  new NotificationEvent({
+  new NotificationTask({
     userId: '123',
     message: 'Welcome to our platform!',
     type: 'email',
@@ -320,7 +324,7 @@ publisher.publish(
 import { BulkBullMqEventPublisher, FanoutRouter } from '@event-driven-architecture/bullmq';
 
 const fanoutRouter = new FanoutRouter();
-fanoutRouter.addRoute(NotificationEvent, {
+fanoutRouter.addRoute(NotificationTask, {
   queues: [{ name: 'email-queue' }, { name: 'sms-queue' }, { name: 'push-queue' }],
 });
 
@@ -328,8 +332,8 @@ const bulkPublisher = new BulkBullMqEventPublisher(queueRegisterService, flowReg
 
 // Efficiently publish multiple fanout events
 bulkPublisher.publishAll([
-  new NotificationEvent({ userId: '1', message: 'Message 1', type: 'email' }),
-  new NotificationEvent({ userId: '2', message: 'Message 2', type: 'sms' }),
+  new NotificationTask({ userId: '1', message: 'Message 1', type: 'email' }),
+  new NotificationTask({ userId: '2', message: 'Message 2', type: 'sms' }),
 ]);
 ```
 
@@ -357,12 +361,12 @@ queueRegisterService.add(emailQueue);
 queueRegisterService.add(smsQueue);
 queueRegisterService.add(pushQueue);
 
-// Register event and handlers
+// Register task and handlers
 const eventsRegisterService = new EventsRegisterService();
-eventsRegisterService.register(NotificationEvent);
+eventsRegisterService.register(NotificationTask);
 
 const handlerRegisterService = new BaseHandlerRegister();
-handlerRegisterService.addHandler(HandlesBullMq(NotificationEvent), new NotificationHandler());
+handlerRegisterService.addHandler(HandlesBullMq(NotificationTask), new NotificationHandler());
 
 // Configure consumer for all queues
 const consumerOptions = [
@@ -398,8 +402,8 @@ consumer.init(); // Start consuming from all queues
 If you need different logic for each queue, you can create queue-specific handlers by checking the `$assignedQueueName` property:
 
 ```typescript
-export class NotificationHandler implements IEventHandler<NotificationEvent, BullMqHandlerContext> {
-  handle(event: NotificationEvent, context: BullMqHandlerContext) {
+export class NotificationHandler implements IEventHandler<NotificationTask, BullMqHandlerContext> {
+  handle(event: NotificationTask, context: BullMqHandlerContext) {
     switch (event.$assignedQueueName) {
       case 'email-queue':
         this.handleEmailNotification(event.payload);
@@ -437,7 +441,7 @@ The consumer wires together three things:
 
 1. A **Worker** per queue (created via `WorkerService.createWorker`). Workers are stored inside `WorkerRegisterService`, keyed by queue name.
 2. The **QueueRegisterService** so the consumer can resolve the underlying `Queue` object when forwarding context to handlers.
-3. The **EventsRegisterService / HandlerRegisterService** pair that lets the consumer map incoming jobs to the right event class and handler.
+3. The **EventsRegisterService / HandlerRegisterService** pair that lets the consumer map incoming jobs to the right task class and handler.
 
 ```typescript
 import {
@@ -489,10 +493,10 @@ When an event is consumed, your handler can receive additional context (such as 
 import { BullMqHandlerContext } from '@event-driven-architecture/bullmq';
 import { EventHandler } from '@event-driven-architecture/core';
 
-import { UserCreatedEvent } from './events/user-created.event';
+import { UserCreatedTask } from './tasks/user-created.task';
 
-export class UserCreatedHandler implements EventHandler<UserCreatedEvent, BullMqHandlerContext> {
-  handle(event: UserCreatedEvent, context: BullMqHandlerContext) {
+export class UserCreatedHandler implements EventHandler<UserCreatedTask, BullMqHandlerContext> {
+  handle(event: UserCreatedTask, context: BullMqHandlerContext) {
     console.log('Job ID:', context.job.id);
     // ...
   }
@@ -503,87 +507,87 @@ export class UserCreatedHandler implements EventHandler<UserCreatedEvent, BullMq
 
 ## Flow Job Processing
 
-BullMQ supports "flow jobs"—hierarchies of jobs with parent/child relationships. This package provides a way to define, publish, and consume such flows using the `BullMqFlowEvent` class.
+BullMQ supports "flow jobs"—hierarchies of jobs with parent/child relationships. This package provides a way to define, publish, and consume such flows using the `BullMqFlowTask` class.
 
-> **Note:** Sub-events (children) may also be instances of `BullMqFlowEvent`, allowing for deeply nested flow hierarchies.
+> **Note:** Sub-tasks (children) may also be instances of `BullMqFlowTask`, allowing for deeply nested flow hierarchies.
 
-### Defining Flow Events
+### Defining Flow Tasks
 
 Always use named interfaces for event payloads to ensure type safety and clarity.
 
 ```typescript
-import { BullMqEvent, BullMqFlowEvent } from '@event-driven-architecture/bullmq';
+import { BullMqFlowTask, BullMqTask } from '@event-driven-architecture/bullmq';
 
 const MAIN_QUEUE = 'main-queue';
 const SUB_QUEUE = 'sub-queue';
 
-interface SubEventPayload {
+interface SubTaskPayload {
   sub: string;
 }
 
-interface FlowEventPayload {
+interface FlowTaskPayload {
   main: string;
   sub: string;
 }
 
-class SubEvent extends BullMqEvent<SubEventPayload> {
-  constructor(payload: SubEventPayload) {
+class SubTask extends BullMqTask<SubTaskPayload> {
+  constructor(payload: SubTaskPayload) {
     super({
       queueName: SUB_QUEUE,
-      name: 'sub-event',
+      name: 'sub-task',
       jobOptions: { attempts: 3 },
       payload,
     });
   }
 }
 
-class FlowEvent extends BullMqFlowEvent<FlowEventPayload> {
-  constructor(payload: FlowEventPayload) {
+class FlowTask extends BullMqFlowTask<FlowTaskPayload> {
+  constructor(payload: FlowTaskPayload) {
     super({
       queueName: MAIN_QUEUE,
-      name: 'flow-event',
+      name: 'flow-task',
       jobOptions: { attempts: 3 },
       payload,
-      children: [new SubEvent({ sub: payload.sub })],
+      children: [new SubTask({ sub: payload.sub })],
     });
   }
 }
 ```
 
-#### Example: Nested Flow Events
+#### Example: Nested Flow Tasks
 
 ```typescript
-interface SubFlowEventPayload {
+interface SubFlowTaskPayload {
   sub: string;
 }
 
-class SubFlowEvent extends BullMqFlowEvent<SubFlowEventPayload> {
-  constructor(payload: SubFlowEventPayload) {
+class SubFlowTask extends BullMqFlowTask<SubFlowTaskPayload> {
+  constructor(payload: SubFlowTaskPayload) {
     super({
       queueName: SUB_QUEUE,
-      name: 'sub-flow-event',
+      name: 'sub-flow-task',
       jobOptions: { attempts: 3 },
       payload,
     });
   }
 }
 
-class MainFlowEvent extends BullMqFlowEvent<FlowEventPayload> {
-  constructor(payload: FlowEventPayload) {
+class MainFlowTask extends BullMqFlowTask<FlowTaskPayload> {
+  constructor(payload: FlowTaskPayload) {
     super({
       queueName: MAIN_QUEUE,
-      name: 'main-flow-event',
+      name: 'main-flow-task',
       jobOptions: { attempts: 3 },
       payload,
-      children: [new SubFlowEvent({ sub: payload.sub })],
+      children: [new SubFlowTask({ sub: payload.sub })],
     });
   }
 }
 ```
 
-### Publishing Flow Events
+### Publishing Flow Tasks
 
-To publish a flow event, use a publisher (atomic or bulk) and provide a `FlowRegisterService`:
+To publish a flow task, use a publisher (atomic or bulk) and provide a `FlowRegisterService`:
 
 ```typescript
 import { AtomicBullMqEventPublisher, FanoutRouter, FlowRegisterService } from '@event-driven-architecture/bullmq';
@@ -594,25 +598,25 @@ flowRegisterService.setDefault(new FlowProducer({ connection: { host: 'localhost
 
 const fanoutRouter = new FanoutRouter();
 const publisher = new AtomicBullMqEventPublisher(queueRegisterService, flowRegisterService, fanoutRouter);
-publisher.publish(new FlowEvent({ main: 'main', sub: 'sub' }));
+publisher.publish(new FlowTask({ main: 'main', sub: 'sub' }));
 ```
 
-### Consuming Flow Events
+### Consuming Flow Tasks
 
-When a flow event is consumed, only the parent event's payload is deserialized by default. **Children are not automatically fetched or deserialized for performance reasons.** If you need to access children, you must fetch them manually from BullMQ using the job's ID or other metadata.
+When a flow task is consumed, only the parent task's payload is deserialized by default. **Children are not automatically fetched or deserialized for performance reasons.** If you need to access children, you must fetch them manually from BullMQ using the job's ID or other metadata.
 
 This design ensures that handlers remain event-agnostic and only deal with the event payload unless they explicitly need to process children.
 
-#### Example: Handler for a Flow Event
+#### Example: Handler for a Flow Task
 
 ```typescript
 import { BullMqHandlerContext } from '@event-driven-architecture/bullmq';
 import { EventHandler } from '@event-driven-architecture/core';
 
-import { FlowEvent } from './events/flow-event';
+import { FlowTask } from './tasks/flow-task';
 
-export class FlowEventHandler implements EventHandler<FlowEvent, BullMqHandlerContext> {
-  async handle(event: FlowEvent, context: BullMqHandlerContext) {}
+export class FlowTaskHandler implements EventHandler<FlowTask, BullMqHandlerContext> {
+  async handle(event: FlowTask, context: BullMqHandlerContext) {}
 }
 ```
 

@@ -1,7 +1,7 @@
 import { Type } from '@event-driven-architecture/core';
 
-import { BullMqEvent } from '../../events/bull-mq.event';
 import { EventTypeNotFoundException } from '../../exceptions';
+import { BullMqTask } from '../../tasks/bull-mq.task';
 
 export interface BullMqEventKey {
   queueName: string;
@@ -9,8 +9,8 @@ export interface BullMqEventKey {
 }
 
 export class EventsRegisterService {
-  private readonly keyClassTypeMap = new Map<string, Type<BullMqEvent>>();
-  protected getKey(entity: BullMqEvent): BullMqEventKey {
+  private readonly keyClassTypeMap = new Map<string, Type<BullMqTask>>();
+  protected getKey(entity: BullMqTask): BullMqEventKey {
     return {
       queueName: entity.$queueName,
       name: entity.$name,
@@ -21,7 +21,7 @@ export class EventsRegisterService {
     return `${key.queueName}:${key.name}`;
   }
 
-  getType(key: BullMqEventKey): Type<BullMqEvent> {
+  getType(key: BullMqEventKey): Type<BullMqTask> {
     const type = this.keyClassTypeMap.get(this.serializeKey(key));
     if (!type) {
       throw new EventTypeNotFoundException(key.name, key.queueName);
@@ -29,7 +29,7 @@ export class EventsRegisterService {
     return type;
   }
 
-  public register(eventType: Type<BullMqEvent>): void {
+  public register(eventType: Type<BullMqTask>): void {
     const instance = new eventType();
     const key = this.getKey(instance);
     const serializedKey = this.serializeKey(key);

@@ -3,8 +3,8 @@ import { ConnectionOptions, FlowProducer, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
   BulkBullMqEventPublisher,
-  BullMqEvent,
-  BullMqFlowEvent,
+  BullMqFlowTask,
+  BullMqTask,
   EventsRegisterService,
   FlowRegisterService,
   QueueRegisterService,
@@ -127,13 +127,13 @@ describe.each([
   ])(
     'should publish and consume flow events with sub events represented as bullmq events',
     async ({ mainPayload, subPayload, mainPayloadExpected, subPayloadExpected }) => {
-      class TestSubEvent extends BullMqEvent {
+      class TestSubEvent extends BullMqTask {
         constructor(payload: object) {
           super({ queueName: QUEUE_2_NAME, name: 'test-sub-event', jobOptions: { attempts: 3 }, payload });
         }
       }
 
-      class TestFlowEvent extends BullMqFlowEvent {
+      class TestFlowEvent extends BullMqFlowTask {
         constructor(mainPayload: object, subPayload: object) {
           super({
             queueName: QUEUE_1_NAME,
@@ -189,7 +189,7 @@ describe.each([
   ])(
     'should publish and consume flow events with sub events represented as bullmq flow events',
     async ({ mainPayload, subPayload, mainPayloadExpected, subPayloadExpected }) => {
-      class TestSubFlowEvent extends BullMqFlowEvent {
+      class TestSubFlowEvent extends BullMqFlowTask {
         constructor(payload: object) {
           super({
             queueName: QUEUE_2_NAME,
@@ -201,7 +201,7 @@ describe.each([
         }
       }
 
-      class TestMainFlowEvent extends BullMqFlowEvent {
+      class TestMainFlowEvent extends BullMqFlowTask {
         constructor(mainPayload: object, subPayload: object) {
           super({
             queueName: QUEUE_1_NAME,

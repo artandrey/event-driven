@@ -1,10 +1,10 @@
 import { Type } from '@event-driven-architecture/core';
 import { JobsOptions } from 'bullmq';
 
-import { BullMqFanoutEvent } from '../../events';
+import { BullMqFanoutTask } from '../../tasks';
 
 export interface FanoutRouteDefinition {
-  event: Type<BullMqFanoutEvent>;
+  event: Type<BullMqFanoutTask>;
   route: FanoutRoute;
 }
 
@@ -42,7 +42,7 @@ export class FanoutRouter {
     }
   }
 
-  public addRoute(event: Type<BullMqFanoutEvent>, route: FanoutRoute): void {
+  public addRoute(event: Type<BullMqFanoutTask>, route: FanoutRoute): void {
     this._routes.set(event, { queues: route.queues });
   }
 
