@@ -1,4 +1,4 @@
-export * from './events';
+export * from './tasks';
 export * from './exceptions';
 export * from './interfaces';
 export * from './services';
