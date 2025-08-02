@@ -1,4 +1,10 @@
-import { BaseHandlerRegister, EventHandler, HandlerRegister } from '@event-driven-architecture/core';
+import {
+  BaseHandlerRegister,
+  EventHandler,
+  HandlerRegister,
+  HandlerThrownException,
+  HandlingResult,
+} from '@event-driven-architecture/core';
 import { HandlesBullMq } from 'packages/bullmq/lib/util';
 import { mapBullMqEventToRoutingMetadata } from 'packages/bullmq/lib/util/map-bull-mq-event-to-routing-metadata';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +21,7 @@ describe('BullMqEventConsumerService', () => {
   let consumerOptions: any;
   let consumerService: BullMqEventConsumerService;
   let handlerRegisterService: HandlerRegister;
+  let mockWorkerCallback: any;
 
   beforeEach(() => {
     workerRegisterService = {
@@ -31,7 +38,10 @@ describe('BullMqEventConsumerService', () => {
     };
 
     workerService = {
-      createWorker: vi.fn(),
+      createWorker: vi.fn().mockImplementation((queueName, callback) => {
+        mockWorkerCallback = callback;
+        return 'workerInstance';
+      }),
     };
 
     eventBus = {
@@ -81,16 +91,21 @@ describe('BullMqEventConsumerService', () => {
     });
   });
 
-  describe('handleJob', () => {
+  describe('worker callback handling', () => {
     class TestEvent extends BullMqTask {
       constructor(payload: object) {
         super({ queueName: 'testQueue', name: 'DummyEvent', jobOptions: { attempts: 3 }, payload });
       }
     }
 
-    it('should map job to event and pass it to the eventBus with proper context', async () => {
+    beforeEach(() => {
+      consumerService.init();
+    });
+
+    it('should process job successfully and pass event to eventBus with proper context', async () => {
       const dummyPayload = { foo: 'bar' };
       eventsRegisterService.getType.mockReturnValue(TestEvent);
+      eventBus.synchronouslyConsumeByStrictlySingleHandler.mockResolvedValue(HandlingResult.success(undefined));
 
       const job = {
         queueName: 'testQueue',
@@ -99,16 +114,13 @@ describe('BullMqEventConsumerService', () => {
         data: dummyPayload,
       };
 
-      const handleJob = consumerService['handleJob'].bind(consumerService);
-
-      await handleJob(job, 'token123');
+      await mockWorkerCallback(job, 'token123');
 
       expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalledTimes(1);
 
       const [eventArg, optionsArg] = eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0];
 
       expect(eventArg).toEqual(new TestEvent(dummyPayload));
-
       expect(optionsArg).toMatchObject({
         context: { job, worker: 'workerMock', queue: 'queueMock', token: 'token123' },
       });
@@ -117,19 +129,76 @@ describe('BullMqEventConsumerService', () => {
       });
     });
 
-    it('should throw an error if event type is not found', async () => {
+    it('should return handler result to worker when handling is successful', async () => {
+      const dummyPayload = { foo: 'bar' };
+      const handlerResult = { processed: true, message: 'Success' };
+
+      eventsRegisterService.getType.mockReturnValue(TestEvent);
+      eventBus.synchronouslyConsumeByStrictlySingleHandler.mockResolvedValue(HandlingResult.success(handlerResult));
+
+      const job = {
+        queueName: 'testQueue',
+        name: 'DummyEvent',
+        opts: { attempts: 3 },
+        data: dummyPayload,
+      };
+
+      const result = await mockWorkerCallback(job, 'token123');
+
+      expect(result).toEqual(handlerResult);
+      expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw error to worker when handler fails', async () => {
+      const dummyPayload = { foo: 'bar' };
+      const handlerError = new Error('Handler failed');
+      const handlerThrownException = new HandlerThrownException('TestEvent', undefined, handlerError);
+
+      eventsRegisterService.getType.mockReturnValue(TestEvent);
+      eventBus.synchronouslyConsumeByStrictlySingleHandler.mockResolvedValue(
+        HandlingResult.error(handlerThrownException),
+      );
+
+      const job = {
+        queueName: 'testQueue',
+        name: 'DummyEvent',
+        opts: { attempts: 3 },
+        data: dummyPayload,
+      };
+
+      await expect(mockWorkerCallback(job, 'token123')).rejects.toThrow(handlerThrownException);
+    });
+
+    it('should throw error to worker when no handler is found', async () => {
+      const dummyPayload = { foo: 'bar' };
+      const noHandlerError = new Error('No handler found');
+
+      eventsRegisterService.getType.mockReturnValue(TestEvent);
+      eventBus.synchronouslyConsumeByStrictlySingleHandler.mockResolvedValue(HandlingResult.error(noHandlerError));
+
+      const job = {
+        queueName: 'testQueue',
+        name: 'DummyEvent',
+        opts: { attempts: 3 },
+        data: dummyPayload,
+      };
+
+      await expect(mockWorkerCallback(job, 'token123')).rejects.toThrow(noHandlerError);
+    });
+
+    it('should throw error to worker when event type is not found during mapping', async () => {
       eventsRegisterService.getType.mockReturnValue(undefined);
 
       const job = {
         queueName: 'testQueue',
-        name: '',
+        name: 'UnknownEvent',
         opts: {},
         data: {},
       };
 
-      const handleJob = consumerService['handleJob'].bind(consumerService);
-
-      await expect(handleJob(job)).rejects.toThrowError();
+      await expect(mockWorkerCallback(job)).rejects.toThrow(
+        'Event type not found for queue: testQueue, name: UnknownEvent',
+      );
     });
   });
 });
