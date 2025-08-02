@@ -1,16 +1,10 @@
-import {
-  BaseEventBus,
-  BaseHandlerRegister,
-  EventBus,
-  EventHandler,
-  HandlerRegister,
-} from '@event-driven-architecture/core';
+import { BaseEventBus, BaseHandlerRegister, EventHandler, HandlerRegister } from '@event-driven-architecture/core';
 import { ConnectionOptions, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
   BulkBullMqEventPublisher,
-  BullMqEvent,
   BullMqEventConsumerService,
+  BullMqTask,
   EventsRegisterService,
   FanoutRouter,
   FlowRegisterService,
@@ -34,7 +28,7 @@ describe.each([
   let queueRegisterService: QueueRegisterService;
   let eventsRegisterService: EventsRegisterService;
   let flowRegisterService: FlowRegisterService;
-  let eventBus: EventBus;
+  let eventBus: BaseEventBus<BullMqTask>;
   let handlerRegister: HandlerRegister;
   let eventConsumer: BullMqEventConsumerService;
   let fanoutRouter: FanoutRouter;
@@ -86,7 +80,7 @@ describe.each([
   it('should publish and consume event', async () => {
     const handlerSpy = vi.fn();
 
-    class TestEvent extends BullMqEvent {
+    class TestEvent extends BullMqTask {
       constructor(payload: object) {
         super({
           name: JOB_NAME,
@@ -106,8 +100,7 @@ describe.each([
     eventConsumer.init();
 
     const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
-    // later replace with BaseEventBus<BullMqEvent>
-    (eventBus as any).publisher = eventPublisher;
+    eventBus.setPublisher(eventPublisher);
 
     eventBus.publish(new TestEvent({ test: 'test' }));
 

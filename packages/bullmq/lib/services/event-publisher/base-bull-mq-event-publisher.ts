@@ -1,23 +1,23 @@
-import { EventPublisher } from '@event-driven-architecture/core';
+import { Publisher } from '@event-driven-architecture/core';
 import { FlowJob, FlowProducer, JobsOptions } from 'bullmq';
 
-import { BullMqFanoutEvent } from '../../events/bull-mq-fanout.event';
-import { BullMqFlowEvent } from '../../events/bull-mq-flow.event';
-import { BullMqEvent } from '../../events/bull-mq.event';
+import { BullMqFanoutTask } from '../../tasks/bull-mq-fanout.task';
+import { BullMqFlowTask } from '../../tasks/bull-mq-flow.task';
+import { BullMqTask } from '../../tasks/bull-mq.task';
 import { FanoutQueueRoute, FanoutRouter } from '../fanout-router/fanout-router';
 import { FlowRegisterService, QueueRegisterService } from '../register';
 
-export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqEvent> {
+export abstract class BaseBullMQEventPublisher implements Publisher<BullMqTask> {
   constructor(
     protected readonly queueRegisterService: QueueRegisterService,
     protected readonly flowRegisterService: FlowRegisterService,
     protected readonly fanoutRouter: FanoutRouter,
   ) {}
 
-  publish<E extends BullMqEvent<object>>(event: E): void {
-    if (event instanceof BullMqFlowEvent) {
+  publish<E extends BullMqTask<object>>(event: E): void {
+    if (event instanceof BullMqFlowTask) {
       this.getCorrespondFlowProducer(event).add(this.mapFlowEventToFlowJob(event));
-    } else if (event instanceof BullMqFanoutEvent) {
+    } else if (event instanceof BullMqFanoutTask) {
       const route = this.fanoutRouter.getRoute(event.constructor);
       if (route) {
         route.queues.forEach((queueRoute) => {
@@ -32,9 +32,9 @@ export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqE
     }
   }
 
-  abstract publishAll<E extends BullMqEvent<object>>(events: E[]): void;
+  abstract publishAll<E extends BullMqTask<object>>(events: E[]): void;
 
-  protected resolveJobOptions(event: BullMqFanoutEvent, queueRoute: FanoutQueueRoute): JobsOptions | undefined {
+  protected resolveJobOptions(event: BullMqFanoutTask, queueRoute: FanoutQueueRoute): JobsOptions | undefined {
     if (!('jobOptions' in queueRoute)) {
       return event.$jobOptions;
     }
@@ -49,7 +49,7 @@ export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqE
     }
   }
 
-  protected mapFlowEventToFlowJob(event: BullMqFlowEvent<object>): FlowJob {
+  protected mapFlowEventToFlowJob(event: BullMqFlowTask<object>): FlowJob {
     return {
       name: event.$name,
       data: event._serialize(),
@@ -57,7 +57,7 @@ export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqE
       prefix: event.$prefix,
       opts: event.$jobOptions,
       children: event.$children?.map((child) => {
-        if (child instanceof BullMqFlowEvent) {
+        if (child instanceof BullMqFlowTask) {
           return this.mapFlowEventToFlowJob(child);
         } else {
           return this.mapEventToFlowJob(child);
@@ -66,7 +66,7 @@ export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqE
     };
   }
 
-  protected getCorrespondFlowProducer(event: BullMqFlowEvent<object>): FlowProducer {
+  protected getCorrespondFlowProducer(event: BullMqFlowTask<object>): FlowProducer {
     if (event.$flowName) {
       return this.flowRegisterService.getNamed(event.$flowName);
     } else {
@@ -74,7 +74,7 @@ export abstract class BaseBullMQEventPublisher implements EventPublisher<BullMqE
     }
   }
 
-  protected mapEventToFlowJob(event: BullMqEvent<object>): FlowJob {
+  protected mapEventToFlowJob(event: BullMqTask<object>): FlowJob {
     return {
       name: event.$name,
       data: event._serialize(),

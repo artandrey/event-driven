@@ -1,9 +1,11 @@
 import { JobsOptions } from 'bullmq';
-import { BullMqEvent, BullMqFanoutEvent, BullMqFlowEvent } from 'packages/bullmq/lib';
+
+import { BullMqFanoutTask, BullMqFlowTask } from '../../lib';
+import { BullMqTask } from '../../lib/tasks/bull-mq.task';
 
 export interface CreatedJobEvent<TPayload extends object = object> {
-  instance: BullMqEvent<TPayload>;
-  class: new (payload: TPayload) => BullMqEvent<TPayload>;
+  instance: BullMqTask<TPayload>;
+  class: new (payload: TPayload) => BullMqTask<TPayload>;
   payload: TPayload;
   queueName: string;
   jobOptions: JobsOptions;
@@ -22,7 +24,7 @@ export function createJobEvent<TPayload extends object = object>(
   queueName: string,
   jobOptions: JobsOptions,
 ): CreatedJobEvent<TPayload> {
-  class EventClass extends BullMqEvent<TPayload> {
+  class EventClass extends BullMqTask<TPayload> {
     constructor(p: TPayload) {
       super({ name, payload: p, queueName, jobOptions });
     }
@@ -45,8 +47,8 @@ export function createJobEvent<TPayload extends object = object>(
 }
 
 export interface CreatedFlowEvent<TPayload extends object = object> {
-  instance: BullMqFlowEvent<TPayload>;
-  class: new (payload: TPayload) => BullMqFlowEvent<TPayload>;
+  instance: BullMqTask<TPayload>;
+  class: new (payload: TPayload) => BullMqTask<TPayload>;
   payload: TPayload;
   queueName: string;
   jobOptions: JobsOptions;
@@ -55,7 +57,7 @@ export interface CreatedFlowEvent<TPayload extends object = object> {
   toFlowAddOptions: () => {
     name: string;
     opts: JobsOptions;
-    children: BullMqFlowEvent<TPayload>[];
+    children: BullMqFlowTask<TPayload>[];
     data: TPayload;
     queueName: string;
   };
@@ -66,10 +68,10 @@ export function createFlowEvent<TPayload extends object = object>(
   payload: TPayload,
   queueName: string,
   jobOptions: JobsOptions,
-  nestedFlowEvents: BullMqFlowEvent<TPayload>[],
+  nestedFlowEvents: BullMqFlowTask<TPayload>[],
   flowName?: string,
 ): CreatedFlowEvent<TPayload> {
-  class EventClass extends BullMqFlowEvent<TPayload> {
+  class EventClass extends BullMqFlowTask<TPayload> {
     constructor(p: TPayload) {
       super({ name, payload: p, queueName, jobOptions, flowName: flowName, children: nestedFlowEvents });
     }
@@ -94,8 +96,8 @@ export function createFlowEvent<TPayload extends object = object>(
 }
 
 export interface CreatedFanoutEvent<TPayload extends object = object> {
-  instance: BullMqFanoutEvent<TPayload>;
-  class: new (payload: TPayload) => BullMqFanoutEvent<TPayload>;
+  instance: BullMqFanoutTask<TPayload>;
+  class: new (payload: TPayload) => BullMqFanoutTask<TPayload>;
   payload: TPayload;
   jobOptions: JobsOptions;
   name: string;
@@ -107,7 +109,7 @@ export function createFanoutEvent<TPayload extends object = object>(
   payload: TPayload,
   jobOptions: JobsOptions,
 ): CreatedFanoutEvent<TPayload> {
-  class EventClass extends BullMqFanoutEvent<TPayload> {
+  class EventClass extends BullMqFanoutTask<TPayload> {
     constructor(p: TPayload) {
       super({ name, payload: p, jobOptions });
     }

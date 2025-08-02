@@ -1,12 +1,12 @@
-import { EventHandlerSignature, Type } from '@event-driven-architecture/core';
+import { HandlerSignature, Type } from '@event-driven-architecture/core';
 
-import { BullMqEvent } from '../events';
+import { BullMqTask } from '../tasks';
 import { mapBullMqEventToRoutingMetadata } from './map-bull-mq-event-to-routing-metadata';
 
-export function mapBullMqEventToHandlerSignature(event: Type<BullMqEvent>): EventHandlerSignature {
+export function mapBullMqEventToHandlerSignature(event: Type<BullMqTask>): HandlerSignature {
   const instance = new event();
   return {
-    event: event,
+    handles: event,
     routingMetadata: mapBullMqEventToRoutingMetadata(instance),
   };
 }

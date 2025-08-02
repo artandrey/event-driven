@@ -1,9 +1,9 @@
-import { BullMqEvent, BullMqEventOptions } from './bull-mq.event';
+import { BullMqTask, BullMqTaskOptions } from './bull-mq.task';
 
-export class BullMqFanoutEvent<TPayload extends object = object> extends BullMqEvent<TPayload> {
+export class BullMqFanoutTask<TPayload extends object = object> extends BullMqTask<TPayload> {
   private readonly _assignedQueueName: string | null = null;
 
-  constructor(options: Omit<BullMqEventOptions<TPayload>, 'queueName'> & { queueName?: string }) {
+  constructor(options: Omit<BullMqTaskOptions<TPayload>, 'queueName'> & { queueName?: string }) {
     // TODO: Consider removing fallback queue name from options
     super({ ...options, queueName: options.queueName || '__fanout__' });
   }
