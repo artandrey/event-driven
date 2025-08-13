@@ -1,9 +1,9 @@
 import { EventBus, HandlerRegister, Type } from '@event-driven-architecture/core';
 import { FlowJob, Job, Processor, WorkerOptions } from 'bullmq';
 
-import { BullMqFanoutEvent, BullMqFlowEvent } from '../../events';
-import { BullMqEvent } from '../../events/bull-mq.event';
 import { BullMqHandlerContext } from '../../interfaces/bull-mq-handler-context.interface';
+import { BullMqFanoutTask, BullMqFlowTask } from '../../tasks';
+import { BullMqTask } from '../../tasks/bull-mq.task';
 import {
   isBullMqEventRoutingMetadata,
   mapBullMqEventToRoutingMetadata,
@@ -18,14 +18,14 @@ export interface BullMqEventConsumerOptions {
   workerOptions: WorkerOptions;
 }
 
-export class BullMqEventConsumerService {
+export class BullMqEventConsumerService<THandlable extends BullMqTask = BullMqTask> {
   constructor(
     private readonly workerRegisterService: WorkerRegisterService,
     private readonly queueRegisterService: QueueRegisterService,
     private readonly eventsRegisterService: EventsRegisterService,
     private readonly consumerOptions: BullMqEventConsumerOptions[],
     private readonly workerService: WorkerService,
-    private readonly eventBus: EventBus,
+    private readonly eventBus: EventBus<THandlable>,
     private readonly handlerRegisterService: HandlerRegister,
   ) {}
 
@@ -38,7 +38,7 @@ export class BullMqEventConsumerService {
       .getHandlerSignatures()
       .filter((handlerSignature) => isBullMqEventRoutingMetadata(handlerSignature.routingMetadata))
       .forEach((handlerSignature) => {
-        this.eventsRegisterService.register(handlerSignature.event as Type<BullMqEvent>);
+        this.eventsRegisterService.register(handlerSignature.handles as Type<BullMqTask>);
       });
   }
 
@@ -50,7 +50,7 @@ export class BullMqEventConsumerService {
     });
   };
 
-  private mapJobToEvent(job: Job | FlowJob): BullMqEvent | BullMqFlowEvent {
+  private mapJobToEvent(job: Job | FlowJob): THandlable {
     const EventClass = this.eventsRegisterService.getType({
       queueName: job.queueName,
       name: job.name,
@@ -68,12 +68,12 @@ export class BullMqEventConsumerService {
       _jobOptions: job.opts,
     });
 
-    if (eventInstance instanceof BullMqFlowEvent) {
+    if (eventInstance instanceof BullMqFlowTask) {
       (eventInstance as any)._prefix = (job as FlowJob).prefix;
       (eventInstance as any)._children = null;
     }
 
-    if (eventInstance instanceof BullMqFanoutEvent) {
+    if (eventInstance instanceof BullMqFanoutTask) {
       (eventInstance as any)._assignedQueueName = (job as Job).queueName;
     }
 

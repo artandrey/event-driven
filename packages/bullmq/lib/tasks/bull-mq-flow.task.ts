@@ -1,10 +1,10 @@
-import { BullMqEvent, BullMqEventOptions } from './bull-mq.event';
+import { BullMqTask, BullMqTaskOptions } from './bull-mq.task';
 
-export interface BullMqFlowEventOptions<TPayload extends object = object> extends BullMqEventOptions<TPayload> {
+export interface BullMqFlowTaskOptions<TPayload extends object = object> extends BullMqTaskOptions<TPayload> {
   /**
    * Children jobs that belong to this flow job.
    */
-  children?: BullMqEvent<TPayload>[];
+  children?: BullMqTask<TPayload>[];
   /**
    * The name of the flow producer to use. When omitted, the default (singleton) flow producer will be used.
    */
@@ -15,12 +15,12 @@ export interface BullMqFlowEventOptions<TPayload extends object = object> extend
   prefix?: string;
 }
 
-export class BullMqFlowEvent<TPayload extends object = object> extends BullMqEvent<TPayload> {
-  protected readonly _children: BullMqEvent<TPayload>[] | null;
+export class BullMqFlowTask<TPayload extends object = object> extends BullMqTask<TPayload> {
+  protected readonly _children: BullMqTask<TPayload>[] | null;
   protected readonly _flowName: string | null;
   protected readonly _prefix: string | undefined;
 
-  constructor(options: BullMqFlowEventOptions<TPayload>) {
+  constructor(options: BullMqFlowTaskOptions<TPayload>) {
     super(options);
 
     this._children = options.children ?? null;
@@ -28,7 +28,7 @@ export class BullMqFlowEvent<TPayload extends object = object> extends BullMqEve
     this._prefix = options.prefix;
   }
 
-  get $children(): BullMqEvent<TPayload>[] | null {
+  get $children(): BullMqTask<TPayload>[] | null {
     return this._children;
   }
 

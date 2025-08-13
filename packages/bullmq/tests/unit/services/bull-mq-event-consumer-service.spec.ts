@@ -1,10 +1,10 @@
 import { BaseHandlerRegister, EventHandler, HandlerRegister } from '@event-driven-architecture/core';
-import { BullMqEvent } from 'packages/bullmq/lib/events/bull-mq.event';
 import { HandlesBullMq } from 'packages/bullmq/lib/util';
 import { mapBullMqEventToRoutingMetadata } from 'packages/bullmq/lib/util/map-bull-mq-event-to-routing-metadata';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BullMqEventConsumerService } from '../../../lib/services/event-consumer/bull-mq-event-consumer.service';
+import { BullMqTask } from '../../../lib/tasks/bull-mq.task';
 
 describe('BullMqEventConsumerService', () => {
   let workerRegisterService: any;
@@ -62,7 +62,7 @@ describe('BullMqEventConsumerService', () => {
     });
 
     it('should register events from handler signatures', () => {
-      class TestEvent extends BullMqEvent {
+      class TestEvent extends BullMqTask {
         constructor(payload: object) {
           super({ queueName: 'testQueue', name: 'DummyEvent', jobOptions: { attempts: 3 }, payload });
         }
@@ -82,7 +82,7 @@ describe('BullMqEventConsumerService', () => {
   });
 
   describe('handleJob', () => {
-    class TestEvent extends BullMqEvent {
+    class TestEvent extends BullMqTask {
       constructor(payload: object) {
         super({ queueName: 'testQueue', name: 'DummyEvent', jobOptions: { attempts: 3 }, payload });
       }

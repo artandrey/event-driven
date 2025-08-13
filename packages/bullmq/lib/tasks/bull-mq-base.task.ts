@@ -1,7 +1,7 @@
-import { Event } from '@event-driven-architecture/core';
+import { Task } from '@event-driven-architecture/core';
 import { JobsOptions } from 'bullmq';
 
-export interface BullMqBaseEventOptions<TPayload extends object = object> {
+export interface BullMqBaseTaskOptions<TPayload extends object = object> {
   /** The job name (will be mapped to the event name) */
   name: string;
   /** BullMQ job options */
@@ -10,12 +10,12 @@ export interface BullMqBaseEventOptions<TPayload extends object = object> {
   payload: TPayload | null;
 }
 
-export abstract class BullMqBaseEvent<TPayload extends object = object> implements Event<TPayload> {
+export abstract class BullMqBaseTask<TPayload extends object = object> implements Task<TPayload> {
   protected readonly _name: string;
   protected readonly _jobOptions: Readonly<JobsOptions> | undefined;
   protected readonly _payload: TPayload | null;
 
-  constructor(options: BullMqBaseEventOptions<TPayload>) {
+  constructor(options: BullMqBaseTaskOptions<TPayload>) {
     this._name = options.name;
     this._jobOptions = options.jobOptions;
     this._payload = options.payload;

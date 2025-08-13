@@ -3,7 +3,7 @@ import { ConnectionOptions, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
   BulkBullMqEventPublisher,
-  BullMqEvent,
+  BullMqTask,
   EventsRegisterService,
   FlowRegisterService,
   QueueRegisterService,
@@ -40,7 +40,7 @@ describe.each([
 
   const getConnectionOptions = withRedisContainer();
 
-  class TestEvent extends BullMqEvent<object> {
+  class TestEvent extends BullMqTask<object> {
     constructor(payload: object) {
       super({ queueName: QUEUE_NAME, name: 'test-event', jobOptions: { attempts: 3 }, payload });
     }
