@@ -1,4 +1,5 @@
 import { BaseHandlerRegister } from '@event-driven-architecture/core';
+import { HandlingResult } from '@event-driven-architecture/core';
 import { ConnectionOptions, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
@@ -79,6 +80,10 @@ describe.each([
     eventConsumer.init();
     vi.resetAllMocks();
   }, 60000);
+
+  beforeEach(() => {
+    eventBus.synchronouslyConsumeByStrictlySingleHandler.mockResolvedValue(HandlingResult.success(undefined));
+  });
 
   afterEach(async () => {
     await Promise.all(workerRegisterService.getAll().map((worker) => worker.close()));

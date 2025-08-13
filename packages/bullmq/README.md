@@ -62,7 +62,20 @@ import { BullMqTask } from '@event-driven-architecture/bullmq';
 
 const QUEUE_NAME = 'user-queue';
 
-export class UserCreatedTask extends BullMqTask<{ userId: string }> {
+export class UserPostProcessingTask extends BullMqTask<{ userId: string }> {
+  constructor(payload: { userId: string }) {
+    super({
+      queueName: QUEUE_NAME,
+      name: 'user-created',
+      jobOptions: { attempts: 3 },
+      payload,
+    });
+  }
+}
+
+// or semantically name class as event in case in assumed to be processed by event handler without returning a result
+
+export class UserCreatedEvent extends BullMqTask<{ userId: string }> {
   constructor(payload: { userId: string }) {
     super({
       queueName: QUEUE_NAME,
@@ -78,7 +91,7 @@ export class UserCreatedTask extends BullMqTask<{ userId: string }> {
 
 ## Creating Event Handlers
 
-Handlers are completely decoupled from BullMQ. They only depend on the event type and its payload:
+Handlers are initially decoupled from BullMQ. They only depend on the event or task type and its payload:
 
 ```typescript
 import { EventHandler } from '@event-driven-architecture/core';
@@ -94,6 +107,32 @@ export class UserCreatedHandler implements EventHandler<UserCreatedTask> {
 ```
 
 ---
+
+## Creating Task Handler
+
+Handlers are also decoupled from BullMQ, while depending not only on the task type and expected result:
+
+```typescript
+import { TaskHandler } from '@event-driven-architecture/core';
+
+import { UserPostProcessingTask } from './tasks/user-created.task';
+
+export interface UserPostProcessingResult {
+  // any
+}
+
+export class UserPostProcessingTaskHandler implements TaskHandler<UserPostProcessingTask, UserPostProcessingResult> {
+  handle(task: UserPostProcessingTask) {
+    return; // post processing result. This value will appear as job processing result.
+  }
+}
+// or
+export class UserPostProcessingTaskHandler implements TaskHandler<UserPostProcessingTask, UserPostProcessingResult> {
+  handle(task: UserPostProcessingTask) {
+    throw new Error('Post processing failed'); // error will be propagated to worker and result in job processing to be failed.
+  }
+}
+```
 
 ## Registering Queues and Handlers
 
