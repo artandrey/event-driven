@@ -1,5 +1,12 @@
 # @event-driven-architecture/bullmq
 
+## 0.7.0
+
+### Minor Changes
+
+- 94812d1: Migrate to core 1.0.0 and rename event classes to task classes for better semantic
+- f066b77: Pass values and errors to worker from result of handling
+
 ## 0.6.0
 
 ### Patch Changes
