@@ -62,7 +62,7 @@ export class BullMqEventConsumerService<THandlable extends BullMqTask = BullMqTa
       throw new Error(`Event type not found for queue: ${job.queueName}, name: ${job.name}`);
     }
 
-    const eventInstance = Object.create(EventClass.prototype);
+    const eventInstance = Object.create(EventClass.prototype) as THandlable;
 
     Object.assign(eventInstance, {
       _queueName: job.queueName,
@@ -71,15 +71,17 @@ export class BullMqEventConsumerService<THandlable extends BullMqTask = BullMqTa
     });
 
     if (eventInstance instanceof BullMqFlowTask) {
-      (eventInstance as any)._prefix = (job as FlowJob).prefix;
-      (eventInstance as any)._children = null;
+      eventInstance._setFlowRuntimeMetadata({
+        prefix: job.prefix,
+        children: null,
+      });
     }
 
     if (eventInstance instanceof BullMqFanoutTask) {
-      (eventInstance as any)._assignedQueueName = (job as Job).queueName;
+      eventInstance._setAssignedQueueName(job.queueName);
     }
 
-    eventInstance._payload = eventInstance._deserialize(job.data);
+    eventInstance._setPayload(eventInstance._deserialize(job.data));
 
     return eventInstance;
   }
