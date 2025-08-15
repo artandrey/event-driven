@@ -16,6 +16,7 @@ This package provides BullMQ integration for the [@event-driven-architecture/cor
 - [Installation](#installation)
 - [Defining Tasks](#defining-tasks)
 - [Creating Event Handlers](#creating-event-handlers)
+- [Creating Task Handlers](#creating-task-handlers)
 - [Registering Queues and Handlers](#registering-queues-and-handlers)
 - [Publishing Events](#publishing-events)
   - [Atomic vs Bulk Publishing](#atomic-vs-bulk-publishing)
@@ -26,10 +27,16 @@ This package provides BullMQ integration for the [@event-driven-architecture/cor
   - [Publishing Fanout Events](#publishing-fanout-events)
   - [Consuming Fanout Events](#consuming-fanout-events)
 - [Consuming Events](#consuming-events)
+- [Flow Job Processing](#flow-job-processing)
+  - [Defining Flow Tasks](#defining-flow-tasks)
+  - [Publishing Flow Tasks](#publishing-flow-tasks)
+  - [Consuming Flow Tasks](#consuming-flow-tasks)
+  - [Why Children Are Not Fetched by Default](#why-children-are-not-fetched-by-default)
 - [Handler Context](#handler-context)
+- [Tasks Construction Options](#tasks-construction-options)
 - [Testing](#testing)
 - [API Reference](#api-reference)
-- [Flow Job Processing](#flow-job-processing)
+- [Design Constraints](#design-constraints)
 
 ---
 
@@ -57,7 +64,7 @@ bun add @event-driven-architecture/bullmq bullmq @event-driven-architecture/core
 
 All BullMQ-specific details (queue name, event name, job options) are defined in the task class. This keeps handlers and the rest of your application agnostic to the transport layer.
 
-> **Important Constructor Requirement:** Task constructors must not throw errors when called without parameters, as the framework calls constructors during introspection for task discovery and registration. If your constructor logic may throw errors, consider using factory methods for instance creation instead.
+See [Design Constraints](#design-constraints) for constructor requirements used by the framework during introspection.
 
 ```typescript
 import { BullMqTask } from '@event-driven-architecture/bullmq';
@@ -75,7 +82,7 @@ export class UserPostProcessingTask extends BullMqTask<{ userId: string }> {
   }
 }
 
-// or semantically name class as event in case in assumed to be processed by event handler without returning a result
+// Or semantically name class as event if it's assumed to be processed by event handler without returning a result
 
 export class UserCreatedEvent extends BullMqTask<{ userId: string }> {
   constructor(payload: { userId: string }) {
@@ -93,7 +100,7 @@ export class UserCreatedEvent extends BullMqTask<{ userId: string }> {
 
 ## Creating Event Handlers
 
-Handlers are initially decoupled from BullMQ. They only depend on the event or task type and its payload:
+Event handlers are decoupled from BullMQ. They only depend on the event or task type and its payload:
 
 ```typescript
 import { EventHandler } from '@event-driven-architecture/core';
@@ -110,28 +117,30 @@ export class UserCreatedHandler implements EventHandler<UserCreatedTask> {
 
 ---
 
-## Creating Task Handler
+## Creating Task Handlers
 
-Handlers are also decoupled from BullMQ, while depending not only on the task type and expected result:
+Task handlers are also decoupled from BullMQ, depending on the task type and expected result:
 
 ```typescript
 import { TaskHandler } from '@event-driven-architecture/core';
 
-import { UserPostProcessingTask } from './tasks/user-created.task';
+import { UserPostProcessingTask } from './tasks/user-post-processing.task';
 
 export interface UserPostProcessingResult {
   // any
 }
 
 export class UserPostProcessingTaskHandler implements TaskHandler<UserPostProcessingTask, UserPostProcessingResult> {
-  handle(task: UserPostProcessingTask) {
-    return; // post processing result. This value will appear as job processing result.
+  handle(task: UserPostProcessingTask): UserPostProcessingResult {
+    // Post processing logic here
+    return {}; // This value will appear as job processing result
   }
 }
-// or
+
+// Or handle errors:
 export class UserPostProcessingTaskHandler implements TaskHandler<UserPostProcessingTask, UserPostProcessingResult> {
-  handle(task: UserPostProcessingTask) {
-    throw new Error('Post processing failed'); // error will be propagated to worker and result in job processing to be failed.
+  handle(task: UserPostProcessingTask): UserPostProcessingResult {
+    throw new Error('Post processing failed'); // Error will be propagated to worker and result in job failure
   }
 }
 ```
@@ -162,18 +171,18 @@ import { Queue } from 'bullmq';
 import { UserCreatedHandler } from './handlers/user-created.handler';
 import { UserCreatedTask } from './tasks/user-created.task';
 
-// 1  Create the required register services
+// 1. Create the required register services
 const eventsRegisterService = new EventsRegisterService();
 const queueRegisterService = new QueueRegisterService();
 const handlerRegisterService = new BaseHandlerRegister();
 const workerRegisterService = new WorkerRegisterService();
 const workerService = new WorkerService(workerRegisterService);
 
-// 2  Register your BullMQ queue instance
+// 2. Register your BullMQ queue instance
 const userQueue = new Queue('user-queue', { connection: { host: 'localhost', port: 6379 } });
 queueRegisterService.add(userQueue);
 
-// 3  Bind the handler to the task
+// 3. Bind the handler to the task
 handlerRegisterService.addHandler(HandlesBullMq(UserCreatedTask), new UserCreatedHandler());
 ```
 
@@ -242,7 +251,7 @@ export class NotificationTask extends BullMqFanoutTask<NotificationPayload> {
 When consumed, fanout tasks provide access to the queue they were actually processed on via the `$assignedQueueName` property. **Note:** This property is only available during event consumption, not during construction or publishing.
 
 ```typescript
-export class NotificationHandler implements IEventHandler<NotificationTask, BullMqHandlerContext> {
+export class NotificationHandler implements EventHandler<NotificationTask, BullMqHandlerContext> {
   handle(event: NotificationTask, context: BullMqHandlerContext) {
     console.log('Processing notification on queue:', event.$assignedQueueName);
     console.log('Notification payload:', event.payload);
@@ -448,8 +457,8 @@ consumer.init(); // Start consuming from all queues
 If you need different logic for each queue, you can create queue-specific handlers by checking the `$assignedQueueName` property:
 
 ```typescript
-export class NotificationHandler implements IEventHandler<NotificationTask, BullMqHandlerContext> {
-  handle(event: NotificationTask, context: BullMqHandlerContext) {
+export class NotificationHandler implements EventHandler<NotificationTask> {
+  handle(event: NotificationTask) {
     switch (event.$assignedQueueName) {
       case 'email-queue':
         this.handleEmailNotification(event.payload);
@@ -482,6 +491,8 @@ export class NotificationHandler implements IEventHandler<NotificationTask, Bull
 ---
 
 ## Consuming Events
+
+> Note: For handlers, you can type the context with `BullMqHandlerContext<MyPayload>` to get a typed `context.job.data`.
 
 The consumer wires together three things:
 
@@ -531,26 +542,6 @@ consumer.init(); // Spawns the workers and starts listening for jobs
 
 ---
 
-## Handler Context
-
-When an event is consumed, your handler can receive additional context (such as the BullMQ job, worker, and queue) if you define your handler to accept it:
-
-```typescript
-import { BullMqHandlerContext } from '@event-driven-architecture/bullmq';
-import { EventHandler } from '@event-driven-architecture/core';
-
-import { UserCreatedTask } from './tasks/user-created.task';
-
-export class UserCreatedHandler implements EventHandler<UserCreatedTask, BullMqHandlerContext> {
-  handle(event: UserCreatedTask, context: BullMqHandlerContext) {
-    console.log('Job ID:', context.job.id);
-    // ...
-  }
-}
-```
-
----
-
 ## Flow Job Processing
 
 BullMQ supports "flow jobs"—hierarchies of jobs with parent/child relationships. This package provides a way to define, publish, and consume such flows using the `BullMqFlowTask` class.
@@ -559,7 +550,7 @@ BullMQ supports "flow jobs"—hierarchies of jobs with parent/child relationship
 
 ### Defining Flow Tasks
 
-Always use named interfaces for event payloads to ensure type safety and clarity.
+Flow tasks extend `BullMqFlowTask` and can contain child tasks. Always use named interfaces for event payloads to ensure type safety and clarity.
 
 ```typescript
 import { BullMqFlowTask, BullMqTask } from '@event-driven-architecture/bullmq';
@@ -576,7 +567,7 @@ interface FlowTaskPayload {
   sub: string;
 }
 
-class SubTask extends BullMqTask<SubTaskPayload> {
+export class SubTask extends BullMqTask<SubTaskPayload> {
   constructor(payload: SubTaskPayload) {
     super({
       queueName: SUB_QUEUE,
@@ -587,7 +578,7 @@ class SubTask extends BullMqTask<SubTaskPayload> {
   }
 }
 
-class FlowTask extends BullMqFlowTask<FlowTaskPayload> {
+export class FlowTask extends BullMqFlowTask<FlowTaskPayload> {
   constructor(payload: FlowTaskPayload) {
     super({
       queueName: MAIN_QUEUE,
@@ -607,7 +598,7 @@ interface SubFlowTaskPayload {
   sub: string;
 }
 
-class SubFlowTask extends BullMqFlowTask<SubFlowTaskPayload> {
+export class SubFlowTask extends BullMqFlowTask<SubFlowTaskPayload> {
   constructor(payload: SubFlowTaskPayload) {
     super({
       queueName: SUB_QUEUE,
@@ -618,7 +609,7 @@ class SubFlowTask extends BullMqFlowTask<SubFlowTaskPayload> {
   }
 }
 
-class MainFlowTask extends BullMqFlowTask<FlowTaskPayload> {
+export class MainFlowTask extends BullMqFlowTask<FlowTaskPayload> {
   constructor(payload: FlowTaskPayload) {
     super({
       queueName: MAIN_QUEUE,
@@ -669,3 +660,44 @@ export class FlowTaskHandler implements EventHandler<FlowTask, BullMqHandlerCont
 ### Why Children Are Not Fetched by Default
 
 Fetching children for every flow job can be expensive and unnecessary if your handler logic does not require them. By default, `event.$children` is `null`.
+
+---
+
+## Tasks Construction Options
+
+The following types define the options available when constructing tasks:
+
+- `BullMqTaskOptions<TPayload extends object = object>` - Options for regular BullMQ tasks
+- `BullMqFlowTaskOptions<TPayload extends object = object>` - Options for flow tasks with parent/child relationships
+- `BullMqHandlerContext<TData = unknown>` - Context provided to handlers during event consumption
+
+## Handler Context
+
+When an event is consumed, your handler can receive additional context (such as the BullMQ job, worker, and queue) if you define your handler to accept it:
+
+```typescript
+import { BullMqHandlerContext } from '@event-driven-architecture/bullmq';
+import { EventHandler } from '@event-driven-architecture/core';
+
+import { UserCreatedTask } from './tasks/user-created.task';
+
+export class UserCreatedHandler implements EventHandler<UserCreatedTask, BullMqHandlerContext> {
+  handle(event: UserCreatedTask, context: BullMqHandlerContext) {
+    console.log('Job ID:', context.job.id);
+    // ...
+  }
+}
+```
+
+---
+
+## Design Constraints
+
+- **Constructor Safety**: Task constructors must not throw when called without parameters. The framework may instantiate task classes without arguments for introspection and registration. If your constructor needs data or may throw, move that logic into a separate factory or static builder and keep the constructor side-effect free.
+
+- **Publish-Only Tasks**: If you publish tasks that are not handled locally, you must register these task classes manually via `eventsRegisterService.register(...)`.
+
+  **Pitfalls to avoid:**
+  - Constructors with side effects
+  - Accessing environment-specific dependencies in constructors
+  - Throwing when parameters are absent
