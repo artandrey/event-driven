@@ -72,13 +72,13 @@ export class BullMqEventConsumerService<THandlable extends BullMqTask = BullMqTa
 
     if (eventInstance instanceof BullMqFlowTask) {
       eventInstance._setFlowRuntimeMetadata({
-        prefix: job.prefix,
+        prefix: (job as FlowJob).prefix,
         children: null,
       });
     }
 
     if (eventInstance instanceof BullMqFanoutTask) {
-      eventInstance._setAssignedQueueName(job.queueName);
+      eventInstance._setAssignedQueueName((job as Job).queueName);
     }
 
     eventInstance._setPayload(eventInstance._deserialize(job.data));
@@ -87,10 +87,13 @@ export class BullMqEventConsumerService<THandlable extends BullMqTask = BullMqTa
   }
 
   private createBullMqHandlerContext(job: Job, token?: string): BullMqHandlerContext {
+    const worker = this.workerRegisterService.get(job.queueName);
+    const queue = this.queueRegisterService.get(job.queueName);
+
     return {
       job,
-      worker: this.workerRegisterService.get(job.queueName),
-      queue: this.queueRegisterService.get(job.queueName),
+      worker,
+      queue,
       token,
     };
   }

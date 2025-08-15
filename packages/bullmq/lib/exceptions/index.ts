@@ -5,3 +5,5 @@ export * from './route-not-found.exception';
 export * from './payload-null.exception';
 export * from './invalid-fanout-route.exception';
 export * from './duplicate-fanout-queue-name.exception';
+export * from './worker-not-found.exception';
+export * from './queue-not-found.exception';
