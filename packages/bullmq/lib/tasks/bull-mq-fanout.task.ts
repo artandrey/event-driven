@@ -1,11 +1,12 @@
-import { BullMqTask, BullMqTaskOptions } from './bull-mq.task';
+import { BullMqBaseTask, BullMqBaseTaskOptions } from './bull-mq-base.task';
 
-export class BullMqFanoutTask<TPayload extends object = object> extends BullMqTask<TPayload> {
+export interface BullMqFanoutTaskOptions<TPayload extends object = object> extends BullMqBaseTaskOptions<TPayload> {}
+
+export class BullMqFanoutTask<TPayload extends object = object> extends BullMqBaseTask<TPayload> {
   private readonly _assignedQueueName: string | null = null;
 
-  constructor(options: Omit<BullMqTaskOptions<TPayload>, 'queueName'> & { queueName?: string }) {
-    // TODO: Consider removing fallback queue name from options
-    super({ ...options, queueName: options.queueName || '__fanout__' });
+  constructor(options: BullMqFanoutTaskOptions<TPayload>) {
+    super(options);
   }
 
   public get $assignedQueueName(): string | null {

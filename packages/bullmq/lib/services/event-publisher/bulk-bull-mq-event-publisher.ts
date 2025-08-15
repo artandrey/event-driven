@@ -1,6 +1,6 @@
 import { JobsOptions } from 'bullmq';
 
-import { BullMqFlowTask } from '../../tasks';
+import { BullMqBaseTask, BullMqFlowTask } from '../../tasks';
 import { BullMqFanoutTask } from '../../tasks/bull-mq-fanout.task';
 import { BullMqTask } from '../../tasks/bull-mq.task';
 import { FanoutRouter } from '../fanout-router/fanout-router';
@@ -29,15 +29,17 @@ export class BulkBullMqEventPublisher extends BaseBullMQEventPublisher {
     super(queueRegisterService, flowRegisterService, fanoutRouter);
   }
 
-  publishAll<E extends BullMqTask<object>>(events: E[]): void {
+  publishAll<E extends BullMqBaseTask<object>>(events: E[]): void {
     const eventTypeEventsMap = events.reduce(
       (acc, event) => {
         if (event instanceof BullMqFanoutTask) {
           acc.fanout.push(event);
         } else if (event instanceof BullMqFlowTask) {
           acc.flow.push(event);
-        } else {
+        } else if (event instanceof BullMqTask) {
           acc.queue.push(event);
+        } else {
+          throw new Error(`Unexpected event type: ${event.constructor.name}`);
         }
         return acc;
       },
