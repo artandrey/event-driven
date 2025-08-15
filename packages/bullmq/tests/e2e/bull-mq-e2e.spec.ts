@@ -1,4 +1,4 @@
-import { BaseEventBus, BaseHandlerRegister, EventHandler, HandlerRegister } from '@event-driven-architecture/core';
+import { BaseEventBus, BaseHandlerRegister, HandlerRegister, TaskProcessor } from '@event-driven-architecture/core';
 import { ConnectionOptions, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
@@ -77,8 +77,8 @@ describe.each([
     await Promise.all(queueRegisterService.getAll().map((q) => q.close()));
   });
 
-  it('should publish and consume event', async () => {
-    const handlerSpy = vi.fn();
+  it('should publish and process event', async () => {
+    const result = 'completion-result';
 
     class TestEvent extends BullMqTask {
       constructor(payload: object) {
@@ -90,17 +90,23 @@ describe.each([
       }
     }
 
-    class TestHandler implements EventHandler<TestEvent> {
-      handle(event: TestEvent) {
-        handlerSpy(event);
+    class TestHandler implements TaskProcessor<TestEvent> {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      handle(event: TestEvent): any {
+        return result;
       }
     }
+
+    const handlerSpy = vi.spyOn(TestHandler.prototype, 'handle').mockReturnValue(result);
 
     handlerRegister.addHandler(HandlesBullMq(TestEvent), new TestHandler());
     eventConsumer.init();
 
     const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
     eventBus.setPublisher(eventPublisher);
+
+    const jobCompletionSpy = vi.fn();
+    workerRegisterService.get(QUEUE_NAME).on('completed', jobCompletionSpy);
 
     eventBus.publish(new TestEvent({ test: 'test' }));
 
@@ -109,6 +115,8 @@ describe.each([
         expect(handlerSpy).toHaveBeenCalledTimes(1);
         expect(handlerSpy.mock.calls[0][0]).toBeInstanceOf(TestEvent);
         expect(handlerSpy.mock.calls[0][0].payload).toEqual({ test: 'test' });
+        expect(jobCompletionSpy).toHaveBeenCalledTimes(1);
+        expect(jobCompletionSpy.mock.calls[0][1]).toEqual(result);
       },
       { timeout: 10000 },
     );
