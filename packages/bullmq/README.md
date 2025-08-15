@@ -57,6 +57,8 @@ bun add @event-driven-architecture/bullmq bullmq @event-driven-architecture/core
 
 All BullMQ-specific details (queue name, event name, job options) are defined in the task class. This keeps handlers and the rest of your application agnostic to the transport layer.
 
+> **Important Constructor Requirement:** Task constructors must not throw errors when called without parameters, as the framework calls constructors during introspection for task discovery and registration. If your constructor logic may throw errors, consider using factory methods for instance creation instead.
+
 ```typescript
 import { BullMqTask } from '@event-driven-architecture/bullmq';
 
@@ -136,8 +138,15 @@ export class UserPostProcessingTaskHandler implements TaskHandler<UserPostProces
 
 ## Registering Queues and Handlers
 
-Queues still need to be registered explicitly, but **tasks are now discovered automatically from your handler signatures**.  
-Use the `HandlesBullMq` helper to bind a task class to its handler; the consumer service will take care of registering the task class. No manual `eventsRegisterService.register(...)` calls are required anymore.
+Queues still need to be registered explicitly. **Tasks are discovered automatically from your handler signatures when you use the `HandlesBullMq` helper and call `consumer.init()`**.  
+Use the `HandlesBullMq` helper to bind a task class to its handler; the consumer service will automatically register the task class during initialization.
+
+**For tasks that you publish but don't handle locally** (e.g., publishing to external services), you need to register them manually:
+
+```typescript
+// Manual task registration for publish-only tasks
+eventsRegisterService.register(ExternalServiceTask);
+```
 
 ```typescript
 import {
@@ -230,7 +239,7 @@ export class NotificationTask extends BullMqFanoutTask<NotificationPayload> {
 }
 ```
 
-When consumed, fanout tasks provide access to the queue they were actually processed on via the `$assignedQueueName` property:
+When consumed, fanout tasks provide access to the queue they were actually processed on via the `$assignedQueueName` property. **Note:** This property is only available during event consumption, not during construction or publishing.
 
 ```typescript
 export class NotificationHandler implements IEventHandler<NotificationTask, BullMqHandlerContext> {
@@ -400,10 +409,8 @@ queueRegisterService.add(emailQueue);
 queueRegisterService.add(smsQueue);
 queueRegisterService.add(pushQueue);
 
-// Register task and handlers
+// Register handlers - tasks will be auto-discovered when consumer.init() is called
 const eventsRegisterService = new EventsRegisterService();
-eventsRegisterService.register(NotificationTask);
-
 const handlerRegisterService = new BaseHandlerRegister();
 handlerRegisterService.addHandler(HandlesBullMq(NotificationTask), new NotificationHandler());
 
