@@ -45,7 +45,7 @@ describe.each([
     flowRegisterService = new FlowRegisterService();
     handlerRegister = new BaseHandlerRegister();
     eventBus = new BaseEventBus(handlerRegister);
-    fanoutRouter = new FanoutRouter();
+    fanoutRouter = FanoutRouter.create();
 
     const CONNECTION: ConnectionOptions = {
       host: getConnectionOptions().host,

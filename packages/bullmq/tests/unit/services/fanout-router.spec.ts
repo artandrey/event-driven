@@ -4,9 +4,9 @@ import { createFanoutEvent } from '../../__fixtures__/create-event';
 import { randomBullMqOptions } from '../../__fixtures__/random-bull-mq-options';
 
 describe('FanoutRouter', () => {
-  describe('constructor', () => {
+  describe('creation', () => {
     it('should create empty router when no options provided', () => {
-      const router = new FanoutRouter();
+      const router = FanoutRouter.create();
       const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
 
       expect(router.getRoute(TestEventClass)).toBeNull();
@@ -27,7 +27,7 @@ describe('FanoutRouter', () => {
         ],
       };
 
-      const router = new FanoutRouter(options);
+      const router = FanoutRouter.create(options);
 
       expect(router.getRoute(TestEventClass1)).toEqual(route1);
       expect(router.getRoute(TestEventClass2)).toEqual(route2);
@@ -35,7 +35,7 @@ describe('FanoutRouter', () => {
     });
 
     it('should create router with empty routes array', () => {
-      const router = new FanoutRouter({ routes: [] });
+      const router = FanoutRouter.create({ routes: [] });
       const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
 
       expect(router.getRoute(TestEventClass)).toBeNull();
@@ -50,7 +50,7 @@ describe('FanoutRouter', () => {
         routes: [{ event: TestEventClass1, route }],
       };
 
-      const router = new FanoutRouter(options);
+      const router = FanoutRouter.create(options);
 
       expect(router.getRoute(TestEventClass1)).toEqual(route);
       expect(router.getRoute(TestEventClass2)).toBeNull();
@@ -59,7 +59,7 @@ describe('FanoutRouter', () => {
 
   describe('addRoute', () => {
     it('should add new route to empty router', () => {
-      const router = new FanoutRouter();
+      const router = FanoutRouter.create();
       const route: FanoutRoute = { queues: [{ name: 'queue-1' }, { name: 'queue-2' }] };
       const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
       const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { test: 'test2' }, randomBullMqOptions());
@@ -71,7 +71,7 @@ describe('FanoutRouter', () => {
     });
 
     it('should add multiple routes', () => {
-      const router = new FanoutRouter();
+      const router = FanoutRouter.create();
       const route1: FanoutRoute = { queues: [{ name: 'queue-1' }] };
       const route2: FanoutRoute = { queues: [{ name: 'queue-2' }, { name: 'queue-3' }] };
       const route3: FanoutRoute = { queues: [{ name: 'queue-4' }, { name: 'queue-5' }, { name: 'queue-6' }] };
@@ -89,8 +89,8 @@ describe('FanoutRouter', () => {
       expect(router.getRoute(TestEventClass3)).toEqual(route3);
     });
 
-    it('should override existing route', () => {
-      const router = new FanoutRouter();
+    it('should override existing route with addRoute', () => {
+      const router = FanoutRouter.create();
       const originalRoute: FanoutRoute = { queues: [{ name: 'queue-1' }] };
       const newRoute: FanoutRoute = { queues: [{ name: 'queue-2' }, { name: 'queue-3' }] };
       const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
@@ -102,14 +102,12 @@ describe('FanoutRouter', () => {
       expect(router.getRoute(TestEventClass)).toEqual(newRoute);
     });
 
-    it('should add route with empty queues array', () => {
-      const router = new FanoutRouter();
+    it('should add route with empty queues array and throw', () => {
+      const router = FanoutRouter.create();
       const route: FanoutRoute = { queues: [] };
       const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
 
-      router.addRoute(TestEventClass, route);
-
-      expect(router.getRoute(TestEventClass)).toEqual(route);
+      expect(() => router.addRoute(TestEventClass, route)).toThrowError('Fanout route must contain at least one queue');
     });
 
     it('should add route to router initialized with options', () => {
@@ -120,7 +118,7 @@ describe('FanoutRouter', () => {
       const options: FanoutOptions = {
         routes: [{ event: TestEventClass1, route: initialRoute }],
       };
-      const router = new FanoutRouter(options);
+      const router = FanoutRouter.create(options);
 
       const newRoute: FanoutRoute = { queues: [{ name: 'new-queue-1' }, { name: 'new-queue-2' }] };
       router.addRoute(TestEventClass2, newRoute);
@@ -130,9 +128,23 @@ describe('FanoutRouter', () => {
     });
   });
 
+  describe('overrideRoute', () => {
+    it('should override an existing route explicitly', () => {
+      const router = FanoutRouter.create();
+      const originalRoute: FanoutRoute = { queues: [{ name: 'queue-1' }] };
+      const overrideRoute: FanoutRoute = { queues: [{ name: 'override-queue' }] };
+      const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
+
+      router.addRoute(TestEventClass, originalRoute);
+      router.overrideRoute(TestEventClass, overrideRoute);
+
+      expect(router.getRoute(TestEventClass)).toEqual(overrideRoute);
+    });
+  });
+
   describe('getRoute', () => {
     it('should return null for non-existent route', () => {
-      const router = new FanoutRouter();
+      const router = FanoutRouter.create();
       const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
       const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { test: 'test2' }, randomBullMqOptions());
 
@@ -141,7 +153,7 @@ describe('FanoutRouter', () => {
     });
 
     it('should return correct route for existing event', () => {
-      const router = new FanoutRouter();
+      const router = FanoutRouter.create();
       const route: FanoutRoute = { queues: [{ name: 'queue-1' }, { name: 'queue-2' }, { name: 'queue-3' }] };
       const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
 
@@ -151,7 +163,7 @@ describe('FanoutRouter', () => {
     });
 
     it('should return different routes for different events', () => {
-      const router = new FanoutRouter();
+      const router = FanoutRouter.create();
       const route1: FanoutRoute = { queues: [{ name: 'queue-a' }] };
       const route2: FanoutRoute = { queues: [{ name: 'queue-b' }, { name: 'queue-c' }] };
 
@@ -167,14 +179,14 @@ describe('FanoutRouter', () => {
       expect(router.getRoute(TestEventClass3)).toBeNull();
     });
 
-    it('should handle route with duplicate queue names', () => {
-      const router = new FanoutRouter();
+    it('should throw for route with duplicate queue names', () => {
+      const router = FanoutRouter.create();
       const route: FanoutRoute = { queues: [{ name: 'queue-1' }, { name: 'queue-1' }, { name: 'queue-2' }] };
       const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
 
-      router.addRoute(TestEventClass, route);
-
-      expect(router.getRoute(TestEventClass)).toEqual(route);
+      expect(() => router.addRoute(TestEventClass, route)).toThrowError(
+        'Duplicate queue name in fanout route: queue-1',
+      );
     });
   });
 
@@ -203,7 +215,7 @@ describe('FanoutRouter', () => {
         ],
       };
 
-      const router = new FanoutRouter(options);
+      const router = FanoutRouter.create(options);
       router.addRoute(NotificationEventClass, notificationRoute);
 
       expect(router.getRoute(UserEventClass)).toEqual(userEventsRoute);
@@ -212,7 +224,7 @@ describe('FanoutRouter', () => {
     });
 
     it('should maintain route independence', () => {
-      const router = new FanoutRouter();
+      const router = FanoutRouter.create();
       const route1: FanoutRoute = { queues: [{ name: 'queue-1' }] };
       const route2: FanoutRoute = { queues: [{ name: 'queue-2' }] };
 
@@ -225,7 +237,7 @@ describe('FanoutRouter', () => {
       expect(router.getRoute(TestEventClass2)?.queues).not.toContain('modified-queue');
     });
 
-    it('should work with constructor and addRoute together', () => {
+    it('should work with create and addRoute together', () => {
       const initialRoute: FanoutRoute = { queues: [{ name: 'initial-queue' }] };
       const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
       const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { test: 'test2' }, randomBullMqOptions());
@@ -234,13 +246,13 @@ describe('FanoutRouter', () => {
         routes: [{ event: TestEventClass1, route: initialRoute }],
       };
 
-      const router = new FanoutRouter(options);
+      const router = FanoutRouter.create(options);
 
       const additionalRoute: FanoutRoute = { queues: [{ name: 'additional-queue' }] };
       router.addRoute(TestEventClass2, additionalRoute);
 
       const overrideRoute: FanoutRoute = { queues: [{ name: 'override-queue' }] };
-      router.addRoute(TestEventClass1, overrideRoute);
+      router.overrideRoute(TestEventClass1, overrideRoute);
 
       expect(router.getRoute(TestEventClass1)).toEqual(overrideRoute);
       expect(router.getRoute(TestEventClass2)).toEqual(additionalRoute);

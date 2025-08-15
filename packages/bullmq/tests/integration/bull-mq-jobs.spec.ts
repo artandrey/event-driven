@@ -52,7 +52,7 @@ describe.each([
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
     flowRegisterService = new FlowRegisterService();
-    fanoutRouter = new FanoutRouter();
+    fanoutRouter = FanoutRouter.create();
     const CONNECTION: ConnectionOptions = {
       host: getConnectionOptions().host,
       port: getConnectionOptions().port,
