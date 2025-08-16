@@ -1,4 +1,4 @@
-import { BullMqTask } from '../../tasks/bull-mq.task';
+import { BullMqBaseTask } from '../../tasks/bull-mq-base.task';
 import { FanoutRouter } from '../fanout-router/fanout-router';
 import { FlowRegisterService } from '../register';
 import { QueueRegisterService } from '../register/queue-register.service';
@@ -18,7 +18,7 @@ export class AtomicBullMqEventPublisher extends BaseBullMQEventPublisher {
     super(queueRegisterService, flowRegisterService, fanoutRouter);
   }
 
-  publishAll<E extends BullMqTask<object>>(events: E[]): void {
+  publishAll<E extends BullMqBaseTask<object>>(events: E[]): void {
     for (const event of events) {
       this.publish(event);
     }

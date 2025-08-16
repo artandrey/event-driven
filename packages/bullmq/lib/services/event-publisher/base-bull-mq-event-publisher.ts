@@ -1,20 +1,21 @@
 import { Publisher } from '@event-driven-architecture/core';
 import { FlowJob, FlowProducer, JobsOptions } from 'bullmq';
 
+import { BullMqBaseTask } from '../../tasks';
 import { BullMqFanoutTask } from '../../tasks/bull-mq-fanout.task';
 import { BullMqFlowTask } from '../../tasks/bull-mq-flow.task';
 import { BullMqTask } from '../../tasks/bull-mq.task';
 import { FanoutQueueRoute, FanoutRouter } from '../fanout-router/fanout-router';
 import { FlowRegisterService, QueueRegisterService } from '../register';
 
-export abstract class BaseBullMQEventPublisher implements Publisher<BullMqTask> {
+export abstract class BaseBullMQEventPublisher implements Publisher<BullMqBaseTask> {
   constructor(
     protected readonly queueRegisterService: QueueRegisterService,
     protected readonly flowRegisterService: FlowRegisterService,
     protected readonly fanoutRouter: FanoutRouter,
   ) {}
 
-  publish<E extends BullMqTask<object>>(event: E): void {
+  publish<E extends BullMqBaseTask<object>>(event: E): void {
     if (event instanceof BullMqFlowTask) {
       this.getCorrespondFlowProducer(event).add(this.mapFlowEventToFlowJob(event));
     } else if (event instanceof BullMqFanoutTask) {
@@ -27,12 +28,14 @@ export abstract class BaseBullMQEventPublisher implements Publisher<BullMqTask> 
       } else {
         throw new Error(`No route found for event: ${event.$name}`);
       }
-    } else {
+    } else if (event instanceof BullMqTask) {
       this.queueRegisterService.get(event.$queueName).add(event.$name, event._serialize(), event.$jobOptions);
+    } else {
+      throw new Error(`Invalid event type: ${event.constructor.name}`);
     }
   }
 
-  abstract publishAll<E extends BullMqTask<object>>(events: E[]): void;
+  abstract publishAll<E extends BullMqBaseTask<object>>(events: E[]): void;
 
   protected resolveJobOptions(event: BullMqFanoutTask, queueRoute: FanoutQueueRoute): JobsOptions | undefined {
     if (!('jobOptions' in queueRoute)) {

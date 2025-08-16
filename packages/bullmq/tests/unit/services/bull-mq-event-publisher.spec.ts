@@ -32,7 +32,7 @@ describe.each([
 ])('BullMqEventPublisher', (EventPublisher, eventPublisherName) => {
   const queueRegisterService = vi.mockObject(new QueueRegisterService());
   const flowRegisterService = vi.mockObject(new FlowRegisterService());
-  const fanoutRouter = vi.mockObject(new FanoutRouter());
+  const fanoutRouter = vi.mockObject(FanoutRouter.create());
 
   afterEach(() => {
     vi.clearAllMocks();
