@@ -304,13 +304,12 @@ import { BullMqFanoutTask } from '@event-driven-architecture/bullmq';
 interface NotificationPayload {
   userId: string;
   message: string;
-  type: 'email' | 'sms' | 'push';
 }
 
 export class NotificationTask extends BullMqFanoutTask<NotificationPayload> {
   constructor(payload: NotificationPayload) {
     super({
-      name: 'notification-sent',
+      name: 'send-notification',
       jobOptions: { attempts: 3, delay: 1000 },
       payload,
     });
@@ -539,7 +538,7 @@ interface NotificationPayload {
 export class NotificationTask extends BullMqFanoutTask<NotificationPayload> {
   constructor(payload: NotificationPayload) {
     super({
-      name: 'notification-sent',
+      name: 'send-notification',
       jobOptions: { attempts: 3 },
       payload,
     });
@@ -572,15 +571,15 @@ class PushNotificationHandler implements EventHandler<NotificationTask> {
 
 // Bind handlers to specific queues for the same job name
 handlerRegister.addHandler(
-  HandlesBullMq(NotificationTask, { queueName: 'email-queue', name: 'notification-sent' }),
+  HandlesBullMq(NotificationTask, { queueName: 'email-queue', name: 'send-notification' }),
   new EmailNotificationHandler(),
 );
 handlerRegister.addHandler(
-  HandlesBullMq(NotificationTask, { queueName: 'sms-queue', name: 'notification-sent' }),
+  HandlesBullMq(NotificationTask, { queueName: 'sms-queue', name: 'send-notification' }),
   new SmsNotificationHandler(),
 );
 handlerRegister.addHandler(
-  HandlesBullMq(NotificationTask, { queueName: 'push-queue', name: 'notification-sent' }),
+  HandlesBullMq(NotificationTask, { queueName: 'push-queue', name: 'send-notification' }),
   new PushNotificationHandler(),
 );
 ```
@@ -804,6 +803,7 @@ The following types define the options available when constructing tasks:
 - **Publish-Only Tasks**: If you publish tasks that are not handled locally, you must register these task classes manually via `eventsRegisterService.register(...)`.
 
 **Pitfalls to avoid:**
+
 - Constructors with side effects
 - Accessing environment-specific dependencies in constructors
 - Throwing when parameters are absent
