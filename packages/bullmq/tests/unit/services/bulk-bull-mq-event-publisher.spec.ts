@@ -3,7 +3,7 @@ import { BulkBullMqEventPublisher, FanoutRouter, FlowRegisterService, QueueRegis
 import { createFanoutEvent, createFlowEvent, createJobEvent } from '../../__fixtures__/create-event';
 import { createFlowProducerMock } from '../../__fixtures__/create-flow-prducer-mock';
 import { createQueueMock } from '../../__fixtures__/create-queue-mock';
-import { randomBullMqOptions } from '../../__fixtures__/random-bull-mq-options';
+import { randomBullMqJobOptions } from '../../__fixtures__/random-bull-mq-options';
 
 describe('BulkBullMqEventPublisher', () => {
   const queueRegisterService = vi.mockObject(new QueueRegisterService());
@@ -21,7 +21,7 @@ describe('BulkBullMqEventPublisher', () => {
       const queue1Mock = createQueueMock();
       const queue2Mock = createQueueMock();
 
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const {
         instance: testEvent1,
@@ -51,7 +51,7 @@ describe('BulkBullMqEventPublisher', () => {
 
     it('should bulk publish queue events to same queue', () => {
       const queueMock = createQueueMock();
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const { instance: testEvent1, toQueueAddBulkOptionsItem: testEvent1ToQueueAddBulkOptionsItem } = createJobEvent(
         'test-event-1',
@@ -80,7 +80,7 @@ describe('BulkBullMqEventPublisher', () => {
 
     it('should bulk publish unnamed flow events', () => {
       const flowProducer = createFlowProducerMock();
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowEvent(
         'test-flow-event-1',
@@ -109,7 +109,7 @@ describe('BulkBullMqEventPublisher', () => {
     it('should bulk publish named flow events', () => {
       const flowProducer1 = createFlowProducerMock();
       const flowProducer2 = createFlowProducerMock();
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowEvent(
         'test-flow-event-1',
@@ -147,7 +147,7 @@ describe('BulkBullMqEventPublisher', () => {
 
     it('should bulk publish named flow events to same flow', () => {
       const flowProducer = createFlowProducerMock();
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowEvent(
         'test-flow-event-1',
@@ -180,7 +180,7 @@ describe('BulkBullMqEventPublisher', () => {
       const queue1Mock = createQueueMock();
       const queue2Mock = createQueueMock();
       const queue3Mock = createQueueMock();
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const {
         instance: testEvent1,
@@ -228,7 +228,7 @@ describe('BulkBullMqEventPublisher', () => {
       const queue1Mock = createQueueMock();
       const queue2Mock = createQueueMock();
       const flowProducer = createFlowProducerMock();
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const { instance: queueEvent, toQueueAddBulkOptionsItem: queueEventToQueueAddBulkOptionsItem } = createJobEvent(
         'queue-event',

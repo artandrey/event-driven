@@ -1,6 +1,6 @@
 import { JobsOptions } from 'bullmq';
 
-export function randomBullMqOptions(): JobsOptions {
+export function randomBullMqJobOptions(): JobsOptions {
   const options: Partial<JobsOptions> = {};
 
   if (Math.random() > 0.5) options.delay = Math.floor(Math.random() * 1000);

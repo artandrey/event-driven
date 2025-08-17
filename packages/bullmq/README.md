@@ -532,7 +532,6 @@ import { BaseHandlerRegister, EventHandler } from '@event-driven-architecture/co
 interface NotificationPayload {
   userId: string;
   message: string;
-  type: 'email' | 'sms' | 'push';
 }
 
 export class NotificationTask extends BullMqFanoutTask<NotificationPayload> {

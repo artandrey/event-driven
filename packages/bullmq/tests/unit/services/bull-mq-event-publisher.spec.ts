@@ -10,7 +10,7 @@ import {
 import { createFanoutEvent, createFlowEvent, createJobEvent } from '../../__fixtures__/create-event';
 import { createFlowProducerMock } from '../../__fixtures__/create-flow-prducer-mock';
 import { createQueueMock } from '../../__fixtures__/create-queue-mock';
-import { randomBullMqOptions } from '../../__fixtures__/random-bull-mq-options';
+import { randomBullMqJobOptions } from '../../__fixtures__/random-bull-mq-options';
 
 describe.each([
   [
@@ -46,7 +46,7 @@ describe.each([
 
   describe(`${eventPublisherName} single instance publish`, () => {
     it('should publish queue event', () => {
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const { instance: testEvent, toQueueAddOptions: testEventToQueueAddOptions } = createJobEvent(
         'test-event',
@@ -65,7 +65,7 @@ describe.each([
     });
 
     it('should publish unnamed flow event', () => {
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const { instance: testEvent, toFlowAddOptions: testEventToFlowAddOptions } = createFlowEvent(
         'test-event',
@@ -85,7 +85,7 @@ describe.each([
     });
 
     it('should publish named flow event', () => {
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const { instance: testEvent, toFlowAddOptions: testEventToFlowAddOptions } = createFlowEvent(
         'test-event',
@@ -111,7 +111,7 @@ describe.each([
       const queue1Mock = createQueueMock();
       const queue2Mock = createQueueMock();
       const queue3Mock = createQueueMock();
-      const jobOptions = randomBullMqOptions();
+      const jobOptions = randomBullMqJobOptions();
 
       const {
         instance: testEvent,
