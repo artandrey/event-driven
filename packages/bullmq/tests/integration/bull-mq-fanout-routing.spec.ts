@@ -1,6 +1,8 @@
-import { BaseEventBus, BaseHandlerRegister, EventHandler } from '@event-driven-architecture/core';
+import { BaseEventBus, BaseHandlerRegister } from '@event-driven-architecture/core';
 import { BullMqFanoutTask } from 'packages/bullmq/lib';
 import { HandlesBullMq } from 'packages/bullmq/lib/util';
+
+import { createTaskProcessor } from '../__fixtures__/task-processor';
 
 describe('BullMQ Fanout handler routing', () => {
   let eventBus: BaseEventBus<BullMqFanoutTask>;
@@ -20,19 +22,17 @@ describe('BullMQ Fanout handler routing', () => {
     }
   }
 
-  class QueueAHandler implements EventHandler<TestFanoutTask> {
-    handle(task: TestFanoutTask): void {
-      // Store result for assertion
-      (task as any).handledBy = 'queue-a';
-    }
-  }
+  const { processor: QueueAHandler, handleSpy: queueAHandleSpy } = createTaskProcessor<TestPayload, void>();
+  const { processor: QueueBHandler, handleSpy: queueBHandleSpy } = createTaskProcessor<TestPayload, void>();
 
-  class QueueBHandler implements EventHandler<TestFanoutTask> {
-    handle(task: TestFanoutTask): void {
-      // Store result for assertion
-      (task as any).handledBy = 'queue-b';
-    }
-  }
+  // Configure the handlers to store results for assertion
+  queueAHandleSpy.mockImplementation(async (task) => {
+    (task as any).handledBy = 'queue-a';
+  });
+
+  queueBHandleSpy.mockImplementation(async (task) => {
+    (task as any).handledBy = 'queue-b';
+  });
 
   beforeEach(() => {
     handlerRegister = new BaseHandlerRegister();

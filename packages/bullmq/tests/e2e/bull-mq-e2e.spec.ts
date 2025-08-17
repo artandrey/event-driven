@@ -1,4 +1,4 @@
-import { BaseEventBus, BaseHandlerRegister, HandlerRegister, TaskProcessor } from '@event-driven-architecture/core';
+import { BaseEventBus, BaseHandlerRegister, HandlerRegister } from '@event-driven-architecture/core';
 import { ConnectionOptions, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
@@ -15,6 +15,7 @@ import {
 import { HandlesBullMq } from 'packages/bullmq/lib/util';
 
 import { withRedisContainer } from '../__fixtures__/redis-fixture';
+import { createTaskProcessor } from '../__fixtures__/task-processor';
 
 describe.each([
   {
@@ -90,14 +91,8 @@ describe.each([
       }
     }
 
-    class TestHandler implements TaskProcessor<TestEvent> {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      handle(event: TestEvent): any {
-        return result;
-      }
-    }
-
-    const handlerSpy = vi.spyOn(TestHandler.prototype, 'handle').mockReturnValue(result);
+    const { processor: TestHandler, handleSpy } = createTaskProcessor<object, any>();
+    handleSpy.mockResolvedValue(result);
 
     handlerRegister.addHandler(HandlesBullMq(TestEvent), new TestHandler());
     eventConsumer.init();
@@ -112,9 +107,9 @@ describe.each([
 
     await vi.waitFor(
       () => {
-        expect(handlerSpy).toHaveBeenCalledTimes(1);
-        expect(handlerSpy.mock.calls[0][0]).toBeInstanceOf(TestEvent);
-        expect(handlerSpy.mock.calls[0][0].payload).toEqual({ test: 'test' });
+        expect(handleSpy).toHaveBeenCalledTimes(1);
+        expect(handleSpy.mock.calls[0][0]).toBeInstanceOf(TestEvent);
+        expect(handleSpy.mock.calls[0][0].payload).toEqual({ test: 'test' });
         expect(jobCompletionSpy).toHaveBeenCalledTimes(1);
         expect(jobCompletionSpy.mock.calls[0][1]).toEqual(result);
       },

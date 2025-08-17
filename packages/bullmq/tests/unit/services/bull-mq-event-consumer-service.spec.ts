@@ -1,6 +1,5 @@
 import {
   BaseHandlerRegister,
-  EventHandler,
   HandlerRegister,
   HandlerThrownException,
   HandlingResult,
@@ -11,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BullMqEventConsumerService } from '../../../lib/services/event-consumer/bull-mq-event-consumer.service';
 import { BullMqTask } from '../../../lib/tasks/bull-mq.task';
+import { createTaskProcessor } from '../../__fixtures__/task-processor';
 
 describe('BullMqEventConsumerService', () => {
   let workerRegisterService: any;
@@ -78,9 +78,7 @@ describe('BullMqEventConsumerService', () => {
         }
       }
 
-      class TestHandler implements EventHandler<TestEvent> {
-        handle() {}
-      }
+      const { processor: TestHandler } = createTaskProcessor<object, void>();
 
       handlerRegisterService.addHandler(HandlesBullMq(TestEvent), new TestHandler());
 
