@@ -25,22 +25,14 @@ describe('BullMQ Fanout handler routing', () => {
   const { processor: QueueAHandler, handleSpy: queueAHandleSpy } = createTaskProcessor<TestPayload, void>();
   const { processor: QueueBHandler, handleSpy: queueBHandleSpy } = createTaskProcessor<TestPayload, void>();
 
-  // Configure the handlers to store results for assertion
-  queueAHandleSpy.mockImplementation(async (task) => {
-    (task as any).handledBy = 'queue-a';
-  });
-
-  queueBHandleSpy.mockImplementation(async (task) => {
-    (task as any).handledBy = 'queue-b';
-  });
-
   beforeEach(() => {
     handlerRegister = new BaseHandlerRegister();
     eventBus = new BaseEventBus(handlerRegister);
+
+    vi.resetAllMocks();
   });
 
   it('should route fanout task to correct handler based on routing metadata', async () => {
-    // Register handlers with specific routing metadata for different queues
     handlerRegister.addHandler(
       HandlesBullMq(TestFanoutTask, { queueName: QUEUE_A, name: JOB_NAME }),
       new QueueAHandler(),
@@ -53,15 +45,14 @@ describe('BullMQ Fanout handler routing', () => {
     const taskA = new TestFanoutTask({ data: 'test-payload' });
     taskA._setAssignedQueueName(QUEUE_A);
 
-    // Call event bus with routing metadata for QUEUE_A
     const resultA = await eventBus.synchronouslyConsumeByStrictlySingleHandler(taskA, {
       routingMetadata: { queueName: QUEUE_A, name: JOB_NAME },
     });
 
     expect(resultA.isSuccess()).toBe(true);
-    expect((taskA as any).handledBy).toBe('queue-a');
+    expect(queueAHandleSpy).toHaveBeenCalledWith(taskA);
+    expect(queueBHandleSpy).not.toHaveBeenCalledWith(taskA);
 
-    // Call event bus with routing metadata for QUEUE_B
     const taskB = new TestFanoutTask({ data: 'test-payload' });
     taskB._setAssignedQueueName(QUEUE_B);
     const resultB = await eventBus.synchronouslyConsumeByStrictlySingleHandler(taskB, {
@@ -69,7 +60,8 @@ describe('BullMQ Fanout handler routing', () => {
     });
 
     expect(resultB.isSuccess()).toBe(true);
-    expect((taskB as any).handledBy).toBe('queue-b');
+    expect(queueBHandleSpy).toHaveBeenCalledWith(taskB);
+    expect(queueAHandleSpy).not.toHaveBeenCalledWith(taskB);
   });
 
   it('should fail to find handler when routing metadata does not match any registered handler', async () => {
