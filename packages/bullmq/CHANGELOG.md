@@ -1,5 +1,23 @@
 # @event-driven-architecture/bullmq
 
+## 0.7.0
+
+### Minor Changes
+
+- 1bf7200: Add ability to bind handlers by queue name and job name
+- 94812d1: Migrate to core 1.0.0 and rename event classes to task classes for better semantic
+- 678f0d3: Split fanout task hierarchy: make BullMqFanoutTask extend BullMqBaseTask instead of BullMqTask to remove the artificial queueName: '**fanout**' placeholder and simplify type constraints
+- 37b837e: Update event publisher to use BullMqBaseTask to support fanout task publishing
+- 0a26a1f: Add generic TData type to type Job data to BullMqHandlerContext
+- ae79ead: Add package exception to workerRegisterService.get and queueRegisterService.get
+- a905f66: Fanout routing:
+  - validate routes on add and provide descriptive exceptions
+  - add ability to override fanout routes
+
+- 0accaf8: Improve internal package type safety by exposing setters for task classes
+- 1bf7200: Resolve issues with Flow task children options being inherited from parent task
+- f066b77: Pass values and errors to worker from result of handling
+
 ## 0.6.0
 
 ### Patch Changes
