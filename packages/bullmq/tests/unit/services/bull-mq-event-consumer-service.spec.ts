@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BullMqEventConsumerService } from '../../../lib/services/event-consumer/bull-mq-event-consumer.service';
 import { createTask } from '../../__fixtures__/create-task';
+import { generateJobName, generateQueueName } from '../../__fixtures__/generate-literals';
 import { createTaskProcessor } from '../../__fixtures__/task-processor';
 
 describe('BullMqEventConsumerService', () => {
@@ -50,7 +51,7 @@ describe('BullMqEventConsumerService', () => {
 
     handlerRegisterService = new BaseHandlerRegister();
 
-    consumerOptions = [{ queueName: 'testQueue', workerOptions: {} }];
+    consumerOptions = [{ queueName: generateQueueName(1), workerOptions: {} }];
 
     consumerService = new BullMqEventConsumerService(
       workerRegisterService,
@@ -68,11 +69,11 @@ describe('BullMqEventConsumerService', () => {
       consumerService.init();
 
       expect(workerService.createWorker).toHaveBeenCalledTimes(1);
-      expect(workerService.createWorker).toHaveBeenCalledWith('testQueue', expect.any(Function), {});
+      expect(workerService.createWorker).toHaveBeenCalledWith(generateQueueName(1), expect.any(Function), {});
     });
 
     it('should register tasks from handler signatures', () => {
-      const testTask = createTask('DummyTask', {}, 'testQueue', { attempts: 3 });
+      const testTask = createTask(generateJobName(1), {}, generateQueueName(1), { attempts: 3 });
 
       const { processor: TestTaskProcessor } = createTaskProcessor<object, void>();
 
@@ -86,7 +87,7 @@ describe('BullMqEventConsumerService', () => {
   });
 
   describe('worker callback handling', () => {
-    const testTask = createTask('DummyTask', {}, 'testQueue', { attempts: 3 });
+    const testTask = createTask(generateJobName(1), {}, generateQueueName(1), { attempts: 3 });
 
     beforeEach(() => {
       consumerService.init();
@@ -98,8 +99,8 @@ describe('BullMqEventConsumerService', () => {
       eventBus.synchronouslyConsumeByStrictlySingleHandler.mockResolvedValue(HandlingResult.success(undefined));
 
       const job = {
-        queueName: 'testQueue',
-        name: 'DummyTask',
+        queueName: generateQueueName(1),
+        name: generateJobName(1),
         opts: { attempts: 3 },
         data: dummyPayload,
       };
@@ -110,7 +111,7 @@ describe('BullMqEventConsumerService', () => {
 
       const [taskArg, optionsArg] = eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0];
 
-      const expectedTask = createTask('DummyTask', dummyPayload, 'testQueue', { attempts: 3 });
+      const expectedTask = createTask(generateJobName(1), dummyPayload, generateQueueName(1), { attempts: 3 });
       expect(taskArg).toEqual(expectedTask.instance);
       expect(optionsArg).toMatchObject({
         context: { job, worker: 'workerMock', queue: 'queueMock', token: 'token123' },
@@ -128,8 +129,8 @@ describe('BullMqEventConsumerService', () => {
       eventBus.synchronouslyConsumeByStrictlySingleHandler.mockResolvedValue(HandlingResult.success(handlerResult));
 
       const job = {
-        queueName: 'testQueue',
-        name: 'DummyTask',
+        queueName: generateQueueName(1),
+        name: generateJobName(1),
         opts: { attempts: 3 },
         data: dummyPayload,
       };
@@ -151,8 +152,8 @@ describe('BullMqEventConsumerService', () => {
       );
 
       const job = {
-        queueName: 'testQueue',
-        name: 'DummyTask',
+        queueName: generateQueueName(1),
+        name: generateJobName(1),
         opts: { attempts: 3 },
         data: dummyPayload,
       };
@@ -168,8 +169,8 @@ describe('BullMqEventConsumerService', () => {
       eventBus.synchronouslyConsumeByStrictlySingleHandler.mockResolvedValue(HandlingResult.error(noHandlerError));
 
       const job = {
-        queueName: 'testQueue',
-        name: 'DummyEvent',
+        queueName: generateQueueName(1),
+        name: generateJobName(1),
         opts: { attempts: 3 },
         data: dummyPayload,
       };
@@ -181,14 +182,14 @@ describe('BullMqEventConsumerService', () => {
       eventsRegisterService.getType.mockReturnValue(undefined);
 
       const job = {
-        queueName: 'testQueue',
-        name: 'UnknownEvent',
+        queueName: generateQueueName(1),
+        name: generateJobName(1),
         opts: {},
         data: {},
       };
 
       await expect(mockWorkerCallback(job)).rejects.toThrow(
-        'Event type not found for queue: testQueue, name: UnknownEvent',
+        `Event type not found for queue: ${generateQueueName(1)}, name: ${generateJobName(1)}`,
       );
     });
   });

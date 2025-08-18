@@ -3,3 +3,7 @@ export const generatePayload = (id: number) => {
     value: id,
   };
 };
+
+export interface TestPayload {
+  value: number;
+}

@@ -15,6 +15,8 @@ import {
 import { HandlesBullMq } from 'packages/bullmq/lib/util';
 
 import { createTask } from '../__fixtures__/create-task';
+import { generateJobName, generateQueueName } from '../__fixtures__/generate-literals';
+import { generatePayload } from '../__fixtures__/generate-pyaload';
 import { withRedisContainer } from '../__fixtures__/redis-fixture';
 import { createTaskProcessor } from '../__fixtures__/task-processor';
 
@@ -34,8 +36,6 @@ describe.each([
   let handlerRegister: HandlerRegister;
   let eventConsumer: BullMqEventConsumerService;
   let fanoutRouter: FanoutRouter;
-  const QUEUE_NAME = 'queue';
-  const JOB_NAME = 'job';
 
   // Dedicated Redis instance per test.
   const getConnectionOptions = withRedisContainer();
@@ -54,7 +54,7 @@ describe.each([
       port: getConnectionOptions().port,
     };
 
-    queueRegisterService.add(new Queue(QUEUE_NAME, { connection: CONNECTION }));
+    queueRegisterService.add(new Queue(generateQueueName(1), { connection: CONNECTION }));
 
     eventConsumer = new BullMqEventConsumerService(
       workerRegisterService,
@@ -62,7 +62,7 @@ describe.each([
       eventsRegisterService,
       [
         {
-          queueName: QUEUE_NAME,
+          queueName: generateQueueName(1),
           workerOptions: {
             connection: CONNECTION,
           },
@@ -82,7 +82,7 @@ describe.each([
   it('should publish and process task', async () => {
     const result = 'completion-result';
 
-    const testTask = createTask(JOB_NAME, { test: 'test' }, QUEUE_NAME, {});
+    const testTask = createTask(generateJobName(1), generatePayload(1), generateQueueName(1), {});
 
     const { processor: TestTaskProcessor, handleSpy } = createTaskProcessor<object, any>();
     handleSpy.mockResolvedValue(result);
@@ -94,7 +94,7 @@ describe.each([
     eventBus.setPublisher(eventPublisher);
 
     const jobCompletionSpy = vi.fn();
-    workerRegisterService.get(QUEUE_NAME).on('completed', jobCompletionSpy);
+    workerRegisterService.get(generateQueueName(1)).on('completed', jobCompletionSpy);
 
     eventBus.publish(testTask.instance);
 
@@ -102,7 +102,7 @@ describe.each([
       () => {
         expect(handleSpy).toHaveBeenCalledTimes(1);
         expect(handleSpy.mock.calls[0][0]).toBeInstanceOf(testTask.class);
-        expect(handleSpy.mock.calls[0][0].payload).toEqual({ test: 'test' });
+        expect(handleSpy.mock.calls[0][0].payload).toEqual(generatePayload(1));
         expect(jobCompletionSpy).toHaveBeenCalledTimes(1);
         expect(jobCompletionSpy.mock.calls[0][1]).toEqual(result);
       },

@@ -10,6 +10,8 @@ import {
 import { createFlowProducerMock } from '../../__fixtures__/create-flow-prducer-mock';
 import { createQueueMock } from '../../__fixtures__/create-queue-mock';
 import { createFanoutTask, createFlowTask, createTask } from '../../__fixtures__/create-task';
+import { generateJobName, generateQueueName } from '../../__fixtures__/generate-literals';
+import { generatePayload } from '../../__fixtures__/generate-pyaload';
 import { randomBullMqJobOptions } from '../../__fixtures__/random-bull-mq-options';
 
 describe.each([
@@ -49,9 +51,9 @@ describe.each([
       const jobOptions = randomBullMqJobOptions();
 
       const { instance: testEvent, toQueueAddOptions: testEventToQueueAddOptions } = createTask(
-        'test-event',
-        { test: 'test' },
-        'queue-1',
+        generateJobName(1),
+        generatePayload(1),
+        generateQueueName(1),
         jobOptions,
       );
 
@@ -68,9 +70,9 @@ describe.each([
       const jobOptions = randomBullMqJobOptions();
 
       const { instance: testEvent, toFlowAddOptions: testEventToFlowAddOptions } = createFlowTask(
-        'test-event',
-        { test: 'test' },
-        'queue-1',
+        generateJobName(1),
+        generatePayload(1),
+        generateQueueName(1),
         jobOptions,
         [],
       );
@@ -85,15 +87,16 @@ describe.each([
     });
 
     it('should publish named flow event', () => {
+      const flowName = 'flow-name';
       const jobOptions = randomBullMqJobOptions();
 
       const { instance: testEvent, toFlowAddOptions: testEventToFlowAddOptions } = createFlowTask(
-        'test-event',
-        { test: 'test' },
-        'queue-1',
+        generateJobName(1),
+        generatePayload(1),
+        generateQueueName(1),
         jobOptions,
         [],
-        'flow-1',
+        flowName,
       );
 
       const flowProducer = createFlowProducerMock();
@@ -102,7 +105,7 @@ describe.each([
 
       eventPublisher.publish(testEvent);
 
-      expect(flowRegisterService.getNamed).toHaveBeenCalledWith('flow-1');
+      expect(flowRegisterService.getNamed).toHaveBeenCalledWith(flowName);
 
       expect(flowProducer.add).toHaveBeenCalledWith(testEventToFlowAddOptions());
     });
@@ -117,18 +120,18 @@ describe.each([
         instance: testEvent,
         class: TestEventClass,
         toFanoutAddOptions,
-      } = createFanoutTask('test-fanout-event', { test: 'fanout-test' }, jobOptions);
+      } = createFanoutTask(generateJobName(1), generatePayload(1), jobOptions);
 
       const [name, payload, options] = toFanoutAddOptions();
 
       fanoutRouter.getRoute.mockReturnValue({
-        queues: [{ name: 'queue-1' }, { name: 'queue-2' }, { name: 'queue-3' }],
+        queues: [{ name: generateQueueName(1) }, { name: generateQueueName(2) }, { name: generateQueueName(3) }],
       });
 
       queueRegisterService.get.mockImplementation((queueName) => {
-        if (queueName === 'queue-1') return queue1Mock;
-        if (queueName === 'queue-2') return queue2Mock;
-        if (queueName === 'queue-3') return queue3Mock;
+        if (queueName === generateQueueName(1)) return queue1Mock;
+        if (queueName === generateQueueName(2)) return queue2Mock;
+        if (queueName === generateQueueName(3)) return queue3Mock;
         throw new Error(`Unexpected queue name: ${queueName}`);
       });
 
@@ -148,21 +151,21 @@ describe.each([
       const queue2CustomOptions = { attempts: 2, backoff: { type: 'fixed', delay: 5000 } };
 
       const { instance: testEvent, class: TestEventClass } = createFanoutTask(
-        'test-fanout-event',
-        { test: 'fanout-test' },
+        generateJobName(1),
+        generatePayload(1),
         eventJobOptions,
       );
 
       fanoutRouter.getRoute.mockReturnValue({
         queues: [
-          { name: 'queue-1', jobOptions: queue1CustomOptions, jobOptionsStrategy: 'rewrite' },
-          { name: 'queue-2', jobOptions: queue2CustomOptions, jobOptionsStrategy: 'rewrite' },
+          { name: generateQueueName(1), jobOptions: queue1CustomOptions, jobOptionsStrategy: 'rewrite' },
+          { name: generateQueueName(2), jobOptions: queue2CustomOptions, jobOptionsStrategy: 'rewrite' },
         ],
       });
 
       queueRegisterService.get.mockImplementation((queueName) => {
-        if (queueName === 'queue-1') return queue1Mock;
-        if (queueName === 'queue-2') return queue2Mock;
+        if (queueName === generateQueueName(1)) return queue1Mock;
+        if (queueName === generateQueueName(2)) return queue2Mock;
         throw new Error(`Unexpected queue name: ${queueName}`);
       });
 
@@ -181,21 +184,21 @@ describe.each([
       const queue2CustomOptions = { delay: 5000, backoff: { type: 'fixed', delay: 2000 } };
 
       const { instance: testEvent, class: TestEventClass } = createFanoutTask(
-        'test-fanout-event',
-        { test: 'fanout-test' },
+        generateJobName(1),
+        generatePayload(1),
         eventJobOptions,
       );
 
       fanoutRouter.getRoute.mockReturnValue({
         queues: [
-          { name: 'queue-1', jobOptions: queue1CustomOptions, jobOptionsStrategy: 'override' },
-          { name: 'queue-2', jobOptions: queue2CustomOptions, jobOptionsStrategy: 'override' },
+          { name: generateQueueName(1), jobOptions: queue1CustomOptions, jobOptionsStrategy: 'override' },
+          { name: generateQueueName(2), jobOptions: queue2CustomOptions, jobOptionsStrategy: 'override' },
         ],
       });
 
       queueRegisterService.get.mockImplementation((queueName) => {
-        if (queueName === 'queue-1') return queue1Mock;
-        if (queueName === 'queue-2') return queue2Mock;
+        if (queueName === generateQueueName(1)) return queue1Mock;
+        if (queueName === generateQueueName(2)) return queue2Mock;
         throw new Error(`Unexpected queue name: ${queueName}`);
       });
 

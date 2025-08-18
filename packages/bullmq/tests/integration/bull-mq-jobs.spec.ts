@@ -14,6 +14,8 @@ import { FanoutRouter } from 'packages/bullmq/lib/services/fanout-router/fanout-
 import { afterEach, beforeEach, describe, expect } from 'vitest';
 
 import { createTask } from '../__fixtures__/create-task';
+import { generateJobName, generateQueueName } from '../__fixtures__/generate-literals';
+import { generatePayload } from '../__fixtures__/generate-pyaload';
 import { withRedisContainer } from '../__fixtures__/redis-fixture';
 
 describe.each([
@@ -36,11 +38,9 @@ describe.each([
     synchronouslyConsumeByMultipleHandlers: vi.fn(),
   };
 
-  const QUEUE_NAME = 'test-queue';
-
   const getConnectionOptions = withRedisContainer();
 
-  const testTask = createTask('test-task', {}, QUEUE_NAME, { attempts: 3 });
+  const testTask = createTask(generateJobName(1), {}, generateQueueName(1), { attempts: 3 });
 
   beforeEach(async () => {
     workerRegisterService = new WorkerRegisterService();
@@ -53,7 +53,7 @@ describe.each([
       port: getConnectionOptions().port,
     };
 
-    queueRegisterService.add(new Queue(QUEUE_NAME, { connection: CONNECTION }));
+    queueRegisterService.add(new Queue(generateQueueName(1), { connection: CONNECTION }));
 
     const eventConsumer = new BullMqEventConsumerService(
       workerRegisterService,
@@ -61,7 +61,7 @@ describe.each([
       eventsRegisterService,
       [
         {
-          queueName: QUEUE_NAME,
+          queueName: generateQueueName(1),
           workerOptions: {
             connection: CONNECTION,
           },
@@ -90,10 +90,8 @@ describe.each([
 
     const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
-    const payload = {
-      test: 'test',
-    };
-    const taskInstance = createTask('test-task', payload, QUEUE_NAME, { attempts: 3 });
+    const payload = generatePayload(1);
+    const taskInstance = createTask(generateJobName(1), payload, generateQueueName(1), { attempts: 3 });
 
     eventPublisher.publish(taskInstance.instance);
     await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
@@ -109,8 +107,8 @@ describe.each([
 
     const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
-    const task1 = createTask('test-task', { test: 'test1' }, QUEUE_NAME, { attempts: 3 });
-    const task2 = createTask('test-task', { test: 'test2' }, QUEUE_NAME, { attempts: 3 });
+    const task1 = createTask(generateJobName(1), generatePayload(1), generateQueueName(1), { attempts: 3 });
+    const task2 = createTask(generateJobName(1), generatePayload(2), generateQueueName(1), { attempts: 3 });
 
     eventPublisher.publishAll([task1.instance, task2.instance]);
     await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalledTimes(2), {
@@ -121,10 +119,10 @@ describe.each([
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0]).toBeInstanceOf(testTask.class);
 
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls.map((call) => call[0])).toEqual(
-      expect.arrayContaining([expect.objectContaining({ _payload: { test: 'test1' } })]),
+      expect.arrayContaining([expect.objectContaining({ _payload: generatePayload(1) })]),
     );
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls.map((call) => call[0])).toEqual(
-      expect.arrayContaining([expect.objectContaining({ _payload: { test: 'test2' } })]),
+      expect.arrayContaining([expect.objectContaining({ _payload: generatePayload(2) })]),
     );
   });
 
@@ -133,7 +131,7 @@ describe.each([
 
     const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
-    const taskInstance = createTask('test-task', { test: 'test' }, QUEUE_NAME, { attempts: 3 });
+    const taskInstance = createTask(generateJobName(1), generatePayload(1), generateQueueName(1), { attempts: 3 });
     eventPublisher.publish(taskInstance.instance);
 
     await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
