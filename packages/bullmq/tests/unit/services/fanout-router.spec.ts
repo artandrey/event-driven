@@ -1,24 +1,36 @@
 import { FanoutOptions, FanoutRoute, FanoutRouter } from 'packages/bullmq/lib';
 
-import { createFanoutEvent } from '../../__fixtures__/create-event';
-import { randomBullMqOptions } from '../../__fixtures__/random-bull-mq-options';
+import { createFanoutTask } from '../../__fixtures__/create-task';
+import { generateJobName, generateQueueName } from '../../__fixtures__/generate-literals';
+import { generatePayload } from '../../__fixtures__/generate-pyaload';
+import { randomBullMqJobOptions } from '../../__fixtures__/random-bull-mq-options';
 
 describe('FanoutRouter', () => {
-  describe('constructor', () => {
+  describe('creation', () => {
     it('should create empty router when no options provided', () => {
-      const router = new FanoutRouter();
-      const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
+      const router = FanoutRouter.create();
+      const { class: TestEventClass } = createFanoutTask('test-event', { test: 'test' }, randomBullMqJobOptions());
 
       expect(router.getRoute(TestEventClass)).toBeNull();
     });
 
     it('should create router with predefined routes', () => {
-      const route1: FanoutRoute = { queues: [{ name: 'queue-1' }, { name: 'queue-2' }] };
-      const route2: FanoutRoute = { queues: [{ name: 'queue-3' }, { name: 'queue-4' }, { name: 'queue-5' }] };
+      const route1: FanoutRoute = { queues: [{ name: generateQueueName(1) }, { name: generateQueueName(2) }] };
+      const route2: FanoutRoute = {
+        queues: [{ name: generateQueueName(3) }, { name: generateQueueName(4) }, { name: generateQueueName(5) }],
+      };
 
-      const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
-      const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { data: 123 }, randomBullMqOptions());
-      const { class: TestEventClass3 } = createFanoutEvent('test-event-3', { value: true }, randomBullMqOptions());
+      const { class: TestEventClass1 } = createFanoutTask(
+        generateJobName(1),
+        { test: 'test1' },
+        randomBullMqJobOptions(),
+      );
+      const { class: TestEventClass2 } = createFanoutTask(generateJobName(2), { data: 123 }, randomBullMqJobOptions());
+      const { class: TestEventClass3 } = createFanoutTask(
+        generateJobName(3),
+        { value: true },
+        randomBullMqJobOptions(),
+      );
 
       const options: FanoutOptions = {
         routes: [
@@ -27,7 +39,7 @@ describe('FanoutRouter', () => {
         ],
       };
 
-      const router = new FanoutRouter(options);
+      const router = FanoutRouter.create(options);
 
       expect(router.getRoute(TestEventClass1)).toEqual(route1);
       expect(router.getRoute(TestEventClass2)).toEqual(route2);
@@ -35,22 +47,34 @@ describe('FanoutRouter', () => {
     });
 
     it('should create router with empty routes array', () => {
-      const router = new FanoutRouter({ routes: [] });
-      const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
+      const router = FanoutRouter.create({ routes: [] });
+      const { class: TestEventClass } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
 
       expect(router.getRoute(TestEventClass)).toBeNull();
     });
 
     it('should handle single route in constructor', () => {
       const route: FanoutRoute = { queues: [{ name: 'single-queue' }] };
-      const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
-      const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { test: 'test2' }, randomBullMqOptions());
+      const { class: TestEventClass1 } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
+      const { class: TestEventClass2 } = createFanoutTask(
+        generateJobName(2),
+        generatePayload(2),
+        randomBullMqJobOptions(),
+      );
 
       const options: FanoutOptions = {
         routes: [{ event: TestEventClass1, route }],
       };
 
-      const router = new FanoutRouter(options);
+      const router = FanoutRouter.create(options);
 
       expect(router.getRoute(TestEventClass1)).toEqual(route);
       expect(router.getRoute(TestEventClass2)).toBeNull();
@@ -59,10 +83,18 @@ describe('FanoutRouter', () => {
 
   describe('addRoute', () => {
     it('should add new route to empty router', () => {
-      const router = new FanoutRouter();
-      const route: FanoutRoute = { queues: [{ name: 'queue-1' }, { name: 'queue-2' }] };
-      const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
-      const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { test: 'test2' }, randomBullMqOptions());
+      const router = FanoutRouter.create();
+      const route: FanoutRoute = { queues: [{ name: generateQueueName(1) }, { name: generateQueueName(2) }] };
+      const { class: TestEventClass1 } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
+      const { class: TestEventClass2 } = createFanoutTask(
+        generateJobName(2),
+        generatePayload(2),
+        randomBullMqJobOptions(),
+      );
 
       router.addRoute(TestEventClass1, route);
 
@@ -71,14 +103,28 @@ describe('FanoutRouter', () => {
     });
 
     it('should add multiple routes', () => {
-      const router = new FanoutRouter();
-      const route1: FanoutRoute = { queues: [{ name: 'queue-1' }] };
-      const route2: FanoutRoute = { queues: [{ name: 'queue-2' }, { name: 'queue-3' }] };
-      const route3: FanoutRoute = { queues: [{ name: 'queue-4' }, { name: 'queue-5' }, { name: 'queue-6' }] };
+      const router = FanoutRouter.create();
+      const route1: FanoutRoute = { queues: [{ name: generateQueueName(1) }] };
+      const route2: FanoutRoute = { queues: [{ name: generateQueueName(2) }, { name: generateQueueName(3) }] };
+      const route3: FanoutRoute = {
+        queues: [{ name: generateQueueName(4) }, { name: generateQueueName(5) }, { name: generateQueueName(6) }],
+      };
 
-      const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
-      const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { data: 123 }, randomBullMqOptions());
-      const { class: TestEventClass3 } = createFanoutEvent('test-event-3', { value: true }, randomBullMqOptions());
+      const { class: TestEventClass1 } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
+      const { class: TestEventClass2 } = createFanoutTask(
+        generateJobName(2),
+        generatePayload(2),
+        randomBullMqJobOptions(),
+      );
+      const { class: TestEventClass3 } = createFanoutTask(
+        generateJobName(3),
+        generatePayload(3),
+        randomBullMqJobOptions(),
+      );
 
       router.addRoute(TestEventClass1, route1);
       router.addRoute(TestEventClass2, route2);
@@ -89,11 +135,15 @@ describe('FanoutRouter', () => {
       expect(router.getRoute(TestEventClass3)).toEqual(route3);
     });
 
-    it('should override existing route', () => {
-      const router = new FanoutRouter();
-      const originalRoute: FanoutRoute = { queues: [{ name: 'queue-1' }] };
-      const newRoute: FanoutRoute = { queues: [{ name: 'queue-2' }, { name: 'queue-3' }] };
-      const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
+    it('should override existing route with addRoute', () => {
+      const router = FanoutRouter.create();
+      const originalRoute: FanoutRoute = { queues: [{ name: generateQueueName(1) }] };
+      const newRoute: FanoutRoute = { queues: [{ name: generateQueueName(2) }, { name: generateQueueName(3) }] };
+      const { class: TestEventClass } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
 
       router.addRoute(TestEventClass, originalRoute);
       expect(router.getRoute(TestEventClass)).toEqual(originalRoute);
@@ -102,27 +152,39 @@ describe('FanoutRouter', () => {
       expect(router.getRoute(TestEventClass)).toEqual(newRoute);
     });
 
-    it('should add route with empty queues array', () => {
-      const router = new FanoutRouter();
+    it('should add route with empty queues array and throw', () => {
+      const router = FanoutRouter.create();
       const route: FanoutRoute = { queues: [] };
-      const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
+      const { class: TestEventClass } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
 
-      router.addRoute(TestEventClass, route);
-
-      expect(router.getRoute(TestEventClass)).toEqual(route);
+      expect(() => router.addRoute(TestEventClass, route)).toThrowError('Fanout route must contain at least one queue');
     });
 
     it('should add route to router initialized with options', () => {
-      const initialRoute: FanoutRoute = { queues: [{ name: 'initial-queue' }] };
-      const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
-      const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { test: 'test2' }, randomBullMqOptions());
+      const initialRoute: FanoutRoute = { queues: [{ name: generateQueueName(1) }] };
+      const { class: TestEventClass1 } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
+      const { class: TestEventClass2 } = createFanoutTask(
+        generateJobName(2),
+        generatePayload(2),
+        randomBullMqJobOptions(),
+      );
 
       const options: FanoutOptions = {
         routes: [{ event: TestEventClass1, route: initialRoute }],
       };
-      const router = new FanoutRouter(options);
+      const router = FanoutRouter.create(options);
 
-      const newRoute: FanoutRoute = { queues: [{ name: 'new-queue-1' }, { name: 'new-queue-2' }] };
+      const newRoute: FanoutRoute = {
+        queues: [{ name: generateQueueName(2) }, { name: generateQueueName(3) }],
+      };
       router.addRoute(TestEventClass2, newRoute);
 
       expect(router.getRoute(TestEventClass1)).toEqual(initialRoute);
@@ -130,34 +192,81 @@ describe('FanoutRouter', () => {
     });
   });
 
+  describe('overrideRoute', () => {
+    it('should override an existing route explicitly', () => {
+      const router = FanoutRouter.create();
+      const originalRoute: FanoutRoute = { queues: [{ name: generateQueueName(1) }] };
+      const overrideRoute: FanoutRoute = { queues: [{ name: generateQueueName(2) }] };
+      const { class: TestEventClass } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
+
+      router.addRoute(TestEventClass, originalRoute);
+      router.overrideRoute(TestEventClass, overrideRoute);
+
+      expect(router.getRoute(TestEventClass)).toEqual(overrideRoute);
+    });
+  });
+
   describe('getRoute', () => {
     it('should return null for non-existent route', () => {
-      const router = new FanoutRouter();
-      const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
-      const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { test: 'test2' }, randomBullMqOptions());
+      const router = FanoutRouter.create();
+      const { class: TestEventClass1 } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
+      const { class: TestEventClass2 } = createFanoutTask(
+        generateJobName(2),
+        generatePayload(2),
+        randomBullMqJobOptions(),
+      );
 
       expect(router.getRoute(TestEventClass1)).toBeNull();
       expect(router.getRoute(TestEventClass2)).toBeNull();
     });
 
-    it('should return correct route for existing event', () => {
-      const router = new FanoutRouter();
-      const route: FanoutRoute = { queues: [{ name: 'queue-1' }, { name: 'queue-2' }, { name: 'queue-3' }] };
-      const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
+    it('should return configured route for existing event', () => {
+      const router = FanoutRouter.create();
+      const route: FanoutRoute = {
+        queues: [{ name: generateQueueName(1) }, { name: generateQueueName(2) }, { name: generateQueueName(3) }],
+      };
+      const { class: TestEventClass } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
 
       router.addRoute(TestEventClass, route);
 
       expect(router.getRoute(TestEventClass)).toEqual(route);
     });
 
-    it('should return different routes for different events', () => {
-      const router = new FanoutRouter();
-      const route1: FanoutRoute = { queues: [{ name: 'queue-a' }] };
-      const route2: FanoutRoute = { queues: [{ name: 'queue-b' }, { name: 'queue-c' }] };
+    it('should return the configured route for each event class', () => {
+      const router = FanoutRouter.create();
+      const route1: FanoutRoute = { queues: [{ name: generateQueueName(1) }] };
+      const route2: FanoutRoute = {
+        queues: [{ name: generateQueueName(2) }, { name: generateQueueName(3) }],
+      };
 
-      const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
-      const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { data: 123 }, randomBullMqOptions());
-      const { class: TestEventClass3 } = createFanoutEvent('test-event-3', { value: true }, randomBullMqOptions());
+      const { class: TestEventClass1 } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
+      const { class: TestEventClass2 } = createFanoutTask(
+        generateJobName(2),
+        generatePayload(2),
+        randomBullMqJobOptions(),
+      );
+
+      const { class: TestEventClass3 } = createFanoutTask(
+        generateJobName(3),
+        generatePayload(3),
+        randomBullMqJobOptions(),
+      );
 
       router.addRoute(TestEventClass1, route1);
       router.addRoute(TestEventClass2, route2);
@@ -167,33 +276,49 @@ describe('FanoutRouter', () => {
       expect(router.getRoute(TestEventClass3)).toBeNull();
     });
 
-    it('should handle route with duplicate queue names', () => {
-      const router = new FanoutRouter();
-      const route: FanoutRoute = { queues: [{ name: 'queue-1' }, { name: 'queue-1' }, { name: 'queue-2' }] };
-      const { class: TestEventClass } = createFanoutEvent('test-event', { test: 'test' }, randomBullMqOptions());
+    it('should throw for route with duplicate queue names', () => {
+      const router = FanoutRouter.create();
+      const route: FanoutRoute = {
+        queues: [{ name: generateQueueName(1) }, { name: generateQueueName(1) }, { name: generateQueueName(2) }],
+      };
+      const { class: TestEventClass } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
 
-      router.addRoute(TestEventClass, route);
-
-      expect(router.getRoute(TestEventClass)).toEqual(route);
+      expect(() => router.addRoute(TestEventClass, route)).toThrowError(
+        `Duplicate queue name in fanout route: ${generateQueueName(1)}`,
+      );
     });
   });
 
   describe('integration scenarios', () => {
-    it('should handle complex routing setup', () => {
+    it('should resolve configured routes for multiple event classes', () => {
       const userEventsRoute: FanoutRoute = {
-        queues: [{ name: 'user-queue' }, { name: 'audit-queue' }, { name: 'analytics-queue' }],
+        queues: [{ name: generateQueueName(1) }, { name: generateQueueName(2) }, { name: generateQueueName(3) }],
       };
-      const orderEventsRoute: FanoutRoute = { queues: [{ name: 'order-queue' }, { name: 'inventory-queue' }] };
+      const orderEventsRoute: FanoutRoute = {
+        queues: [{ name: generateQueueName(4) }, { name: generateQueueName(5) }],
+      };
       const notificationRoute: FanoutRoute = {
-        queues: [{ name: 'email-queue' }, { name: 'sms-queue' }, { name: 'push-queue' }],
+        queues: [{ name: generateQueueName(6) }, { name: generateQueueName(7) }, { name: generateQueueName(8) }],
       };
 
-      const { class: UserEventClass } = createFanoutEvent('user-event', { userId: 123 }, randomBullMqOptions());
-      const { class: OrderEventClass } = createFanoutEvent('order-event', { orderId: 456 }, randomBullMqOptions());
-      const { class: NotificationEventClass } = createFanoutEvent(
-        'notification-event',
-        { message: 'hello' },
-        randomBullMqOptions(),
+      const { class: UserEventClass } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
+      const { class: OrderEventClass } = createFanoutTask(
+        generateJobName(2),
+        generatePayload(2),
+        randomBullMqJobOptions(),
+      );
+      const { class: NotificationEventClass } = createFanoutTask(
+        generateJobName(3),
+        generatePayload(3),
+        randomBullMqJobOptions(),
       );
 
       const options: FanoutOptions = {
@@ -203,7 +328,7 @@ describe('FanoutRouter', () => {
         ],
       };
 
-      const router = new FanoutRouter(options);
+      const router = FanoutRouter.create(options);
       router.addRoute(NotificationEventClass, notificationRoute);
 
       expect(router.getRoute(UserEventClass)).toEqual(userEventsRoute);
@@ -211,39 +336,26 @@ describe('FanoutRouter', () => {
       expect(router.getRoute(NotificationEventClass)).toEqual(notificationRoute);
     });
 
-    it('should maintain route independence', () => {
-      const router = new FanoutRouter();
-      const route1: FanoutRoute = { queues: [{ name: 'queue-1' }] };
-      const route2: FanoutRoute = { queues: [{ name: 'queue-2' }] };
+    it('should not modify existing routes when adding routes for other events', () => {
+      const router = FanoutRouter.create();
+      const route1: FanoutRoute = { queues: [{ name: generateQueueName(1) }] };
+      const route2: FanoutRoute = { queues: [{ name: generateQueueName(2) }] };
 
-      const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
-      const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { test: 'test2' }, randomBullMqOptions());
+      const { class: TestEventClass1 } = createFanoutTask(
+        generateJobName(1),
+        generatePayload(1),
+        randomBullMqJobOptions(),
+      );
+      const { class: TestEventClass2 } = createFanoutTask(
+        generateJobName(2),
+        generatePayload(2),
+        randomBullMqJobOptions(),
+      );
 
       router.addRoute(TestEventClass1, route1);
       router.addRoute(TestEventClass2, route2);
 
-      expect(router.getRoute(TestEventClass2)?.queues).not.toContain('modified-queue');
-    });
-
-    it('should work with constructor and addRoute together', () => {
-      const initialRoute: FanoutRoute = { queues: [{ name: 'initial-queue' }] };
-      const { class: TestEventClass1 } = createFanoutEvent('test-event-1', { test: 'test1' }, randomBullMqOptions());
-      const { class: TestEventClass2 } = createFanoutEvent('test-event-2', { test: 'test2' }, randomBullMqOptions());
-
-      const options: FanoutOptions = {
-        routes: [{ event: TestEventClass1, route: initialRoute }],
-      };
-
-      const router = new FanoutRouter(options);
-
-      const additionalRoute: FanoutRoute = { queues: [{ name: 'additional-queue' }] };
-      router.addRoute(TestEventClass2, additionalRoute);
-
-      const overrideRoute: FanoutRoute = { queues: [{ name: 'override-queue' }] };
-      router.addRoute(TestEventClass1, overrideRoute);
-
-      expect(router.getRoute(TestEventClass1)).toEqual(overrideRoute);
-      expect(router.getRoute(TestEventClass2)).toEqual(additionalRoute);
+      expect(router.getRoute(TestEventClass2)?.queues).not.toContain(generateQueueName(1));
     });
   });
 });

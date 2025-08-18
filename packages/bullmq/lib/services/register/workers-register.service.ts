@@ -1,5 +1,6 @@
 import { Worker } from 'bullmq';
 
+import { WorkerNotFoundException } from '../../exceptions';
 import { EntityRegisterService } from './entity-register.service';
 
 export class WorkerRegisterService extends EntityRegisterService<Worker, string> {
@@ -9,5 +10,9 @@ export class WorkerRegisterService extends EntityRegisterService<Worker, string>
 
   protected serializeKey(key: string): string {
     return key;
+  }
+
+  protected override createNotFoundException(key: string): Error {
+    return new WorkerNotFoundException(key);
   }
 }

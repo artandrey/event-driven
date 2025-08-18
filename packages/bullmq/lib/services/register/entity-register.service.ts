@@ -6,6 +6,10 @@ export abstract class EntityRegisterService<TEntity, TKey, TSerializedKey = TKey
   protected abstract getKey(entity: TEntity): TKey;
   protected abstract serializeKey(key: TKey): TSerializedKey;
 
+  protected createNotFoundException(key: TKey): Error {
+    return new EntityNotFoundException(key);
+  }
+
   public add(entity: TEntity) {
     const key = this.getKey(entity);
     const serializedKey = this.serializeKey(key);
@@ -16,7 +20,7 @@ export abstract class EntityRegisterService<TEntity, TKey, TSerializedKey = TKey
     const serializedKey = this.serializeKey(key);
     const entity = this.keyEntityMap.get(serializedKey);
     if (!entity) {
-      throw new EntityNotFoundException(key);
+      throw this.createNotFoundException(key);
     }
     return entity;
   }

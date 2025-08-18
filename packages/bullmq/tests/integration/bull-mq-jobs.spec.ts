@@ -1,10 +1,8 @@
-import { BaseHandlerRegister } from '@event-driven-architecture/core';
-import { HandlingResult } from '@event-driven-architecture/core';
+import { BaseHandlerRegister, HandlingResult } from '@event-driven-architecture/core';
 import { ConnectionOptions, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
   BulkBullMqEventPublisher,
-  BullMqTask,
   EventsRegisterService,
   FlowRegisterService,
   QueueRegisterService,
@@ -15,6 +13,9 @@ import { BullMqEventConsumerService } from 'packages/bullmq/lib/services/event-c
 import { FanoutRouter } from 'packages/bullmq/lib/services/fanout-router/fanout-router';
 import { afterEach, beforeEach, describe, expect } from 'vitest';
 
+import { createTask } from '../__fixtures__/create-task';
+import { generateJobName, generateQueueName } from '../__fixtures__/generate-literals';
+import { generatePayload } from '../__fixtures__/generate-pyaload';
 import { withRedisContainer } from '../__fixtures__/redis-fixture';
 
 describe.each([
@@ -37,28 +38,22 @@ describe.each([
     synchronouslyConsumeByMultipleHandlers: vi.fn(),
   };
 
-  const QUEUE_NAME = 'test-queue';
-
   const getConnectionOptions = withRedisContainer();
 
-  class TestEvent extends BullMqTask<object> {
-    constructor(payload: object) {
-      super({ queueName: QUEUE_NAME, name: 'test-event', jobOptions: { attempts: 3 }, payload });
-    }
-  }
+  const testTask = createTask(generateJobName(1), {}, generateQueueName(1), { attempts: 3 });
 
   beforeEach(async () => {
     workerRegisterService = new WorkerRegisterService();
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
     flowRegisterService = new FlowRegisterService();
-    fanoutRouter = new FanoutRouter();
+    fanoutRouter = FanoutRouter.create();
     const CONNECTION: ConnectionOptions = {
       host: getConnectionOptions().host,
       port: getConnectionOptions().port,
     };
 
-    queueRegisterService.add(new Queue(QUEUE_NAME, { connection: CONNECTION }));
+    queueRegisterService.add(new Queue(generateQueueName(1), { connection: CONNECTION }));
 
     const eventConsumer = new BullMqEventConsumerService(
       workerRegisterService,
@@ -66,7 +61,7 @@ describe.each([
       eventsRegisterService,
       [
         {
-          queueName: QUEUE_NAME,
+          queueName: generateQueueName(1),
           workerOptions: {
             connection: CONNECTION,
           },
@@ -90,60 +85,61 @@ describe.each([
     await Promise.all(queueRegisterService.getAll().map((queue) => queue.close()));
   });
 
-  it('should publish and consume event', async () => {
-    eventsRegisterService.register(TestEvent);
+  it('should publish and consume task', async () => {
+    eventsRegisterService.register(testTask.class);
 
     const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
-    const payload = {
-      test: 'test',
-    };
+    const payload = generatePayload(1);
+    const taskInstance = createTask(generateJobName(1), payload, generateQueueName(1), { attempts: 3 });
 
-    eventPublisher.publish(new TestEvent(payload));
+    eventPublisher.publish(taskInstance.instance);
     await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
       timeout: 10000,
     });
 
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestEvent);
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toMatchObject(new TestEvent(payload));
+    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(testTask.class);
+    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toMatchObject(taskInstance.instance);
   });
 
-  it('should publish and consume multiple events', async () => {
-    eventsRegisterService.register(TestEvent);
+  it('should publish and consume multiple tasks', async () => {
+    eventsRegisterService.register(testTask.class);
 
     const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
-    eventPublisher.publishAll([new TestEvent({ test: 'test1' }), new TestEvent({ test: 'test2' })]);
+    const task1 = createTask(generateJobName(1), generatePayload(1), generateQueueName(1), { attempts: 3 });
+    const task2 = createTask(generateJobName(1), generatePayload(2), generateQueueName(1), { attempts: 3 });
+
+    eventPublisher.publishAll([task1.instance, task2.instance]);
     await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalledTimes(2), {
       timeout: 10000,
     });
 
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestEvent);
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0]).toBeInstanceOf(TestEvent);
+    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(testTask.class);
+    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0]).toBeInstanceOf(testTask.class);
 
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls.map((call) => call[0])).toEqual(
-      expect.arrayContaining([expect.objectContaining({ _payload: { test: 'test1' } })]),
+      expect.arrayContaining([expect.objectContaining({ _payload: generatePayload(1) })]),
     );
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls.map((call) => call[0])).toEqual(
-      expect.arrayContaining([expect.objectContaining({ _payload: { test: 'test2' } })]),
+      expect.arrayContaining([expect.objectContaining({ _payload: generatePayload(2) })]),
     );
   });
 
-  it('should consume event with context', async () => {
-    eventsRegisterService.register(TestEvent);
+  it('should consume task with context', async () => {
+    eventsRegisterService.register(testTask.class);
 
     const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
 
-    eventPublisher.publish(new TestEvent({ test: 'test' }));
+    const taskInstance = createTask(generateJobName(1), generatePayload(1), generateQueueName(1), { attempts: 3 });
+    eventPublisher.publish(taskInstance.instance);
 
     await vi.waitFor(() => expect(eventBus.synchronouslyConsumeByStrictlySingleHandler).toHaveBeenCalled(), {
       timeout: 10000,
     });
 
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestEvent);
-    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toMatchObject(
-      new TestEvent({ test: 'test' }),
-    );
+    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(testTask.class);
+    expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toMatchObject(taskInstance.instance);
     expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][1].context).toBeDefined();
   });
 });

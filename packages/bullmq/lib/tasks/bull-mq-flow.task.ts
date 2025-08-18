@@ -4,7 +4,7 @@ export interface BullMqFlowTaskOptions<TPayload extends object = object> extends
   /**
    * Children jobs that belong to this flow job.
    */
-  children?: BullMqTask<TPayload>[];
+  children?: BullMqTask<any>[];
   /**
    * The name of the flow producer to use. When omitted, the default (singleton) flow producer will be used.
    */
@@ -15,10 +15,15 @@ export interface BullMqFlowTaskOptions<TPayload extends object = object> extends
   prefix?: string;
 }
 
+export interface BullMqFlowRuntimeMetadata {
+  prefix?: string;
+  children?: BullMqTask<any>[] | null;
+}
+
 export class BullMqFlowTask<TPayload extends object = object> extends BullMqTask<TPayload> {
-  protected readonly _children: BullMqTask<TPayload>[] | null;
-  protected readonly _flowName: string | null;
-  protected readonly _prefix: string | undefined;
+  protected _children: BullMqTask<any>[] | null;
+  protected _flowName: string | null;
+  protected _prefix: string | undefined;
 
   constructor(options: BullMqFlowTaskOptions<TPayload>) {
     super(options);
@@ -38,5 +43,14 @@ export class BullMqFlowTask<TPayload extends object = object> extends BullMqTask
 
   get $prefix(): string | undefined {
     return this._prefix;
+  }
+
+  public _setFlowRuntimeMetadata(options: BullMqFlowRuntimeMetadata): void {
+    if (options.prefix !== undefined) {
+      this._prefix = options.prefix;
+    }
+    if (options.children !== undefined) {
+      this._children = options.children;
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { BaseEventBus, BaseHandlerRegister, EventHandler, HandlerRegister } from '@event-driven-architecture/core';
+import { BaseEventBus, BaseHandlerRegister, HandlerRegister } from '@event-driven-architecture/core';
 import { ConnectionOptions, Queue } from 'bullmq';
 import {
   AtomicBullMqEventPublisher,
@@ -14,7 +14,11 @@ import {
 } from 'packages/bullmq/lib';
 import { HandlesBullMq } from 'packages/bullmq/lib/util';
 
+import { createTask } from '../__fixtures__/create-task';
+import { generateJobName, generateQueueName } from '../__fixtures__/generate-literals';
+import { generatePayload } from '../__fixtures__/generate-pyaload';
 import { withRedisContainer } from '../__fixtures__/redis-fixture';
+import { createTaskProcessor } from '../__fixtures__/task-processor';
 
 describe.each([
   {
@@ -32,8 +36,6 @@ describe.each([
   let handlerRegister: HandlerRegister;
   let eventConsumer: BullMqEventConsumerService;
   let fanoutRouter: FanoutRouter;
-  const QUEUE_NAME = 'queue';
-  const JOB_NAME = 'job';
 
   // Dedicated Redis instance per test.
   const getConnectionOptions = withRedisContainer();
@@ -45,14 +47,14 @@ describe.each([
     flowRegisterService = new FlowRegisterService();
     handlerRegister = new BaseHandlerRegister();
     eventBus = new BaseEventBus(handlerRegister);
-    fanoutRouter = new FanoutRouter();
+    fanoutRouter = FanoutRouter.create();
 
     const CONNECTION: ConnectionOptions = {
       host: getConnectionOptions().host,
       port: getConnectionOptions().port,
     };
 
-    queueRegisterService.add(new Queue(QUEUE_NAME, { connection: CONNECTION }));
+    queueRegisterService.add(new Queue(generateQueueName(1), { connection: CONNECTION }));
 
     eventConsumer = new BullMqEventConsumerService(
       workerRegisterService,
@@ -60,7 +62,7 @@ describe.each([
       eventsRegisterService,
       [
         {
-          queueName: QUEUE_NAME,
+          queueName: generateQueueName(1),
           workerOptions: {
             connection: CONNECTION,
           },
@@ -77,38 +79,32 @@ describe.each([
     await Promise.all(queueRegisterService.getAll().map((q) => q.close()));
   });
 
-  it('should publish and consume event', async () => {
-    const handlerSpy = vi.fn();
+  it('should publish and process task', async () => {
+    const result = 'completion-result';
 
-    class TestEvent extends BullMqTask {
-      constructor(payload: object) {
-        super({
-          name: JOB_NAME,
-          queueName: QUEUE_NAME,
-          payload,
-        });
-      }
-    }
+    const testTask = createTask(generateJobName(1), generatePayload(1), generateQueueName(1), {});
 
-    class TestHandler implements EventHandler<TestEvent> {
-      handle(event: TestEvent) {
-        handlerSpy(event);
-      }
-    }
+    const { processor: TestTaskProcessor, handleSpy } = createTaskProcessor<object, any>();
+    handleSpy.mockResolvedValue(result);
 
-    handlerRegister.addHandler(HandlesBullMq(TestEvent), new TestHandler());
+    handlerRegister.addHandler(HandlesBullMq(testTask.class), new TestTaskProcessor());
     eventConsumer.init();
 
     const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
     eventBus.setPublisher(eventPublisher);
 
-    eventBus.publish(new TestEvent({ test: 'test' }));
+    const jobCompletionSpy = vi.fn();
+    workerRegisterService.get(generateQueueName(1)).on('completed', jobCompletionSpy);
+
+    eventBus.publish(testTask.instance);
 
     await vi.waitFor(
       () => {
-        expect(handlerSpy).toHaveBeenCalledTimes(1);
-        expect(handlerSpy.mock.calls[0][0]).toBeInstanceOf(TestEvent);
-        expect(handlerSpy.mock.calls[0][0].payload).toEqual({ test: 'test' });
+        expect(handleSpy).toHaveBeenCalledTimes(1);
+        expect(handleSpy.mock.calls[0][0]).toBeInstanceOf(testTask.class);
+        expect(handleSpy.mock.calls[0][0].payload).toEqual(generatePayload(1));
+        expect(jobCompletionSpy).toHaveBeenCalledTimes(1);
+        expect(jobCompletionSpy.mock.calls[0][1]).toEqual(result);
       },
       { timeout: 10000 },
     );

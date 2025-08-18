@@ -16,12 +16,14 @@ import { BullMqEventConsumerService } from 'packages/bullmq/lib/services/event-c
 import { FanoutRouter } from 'packages/bullmq/lib/services/fanout-router/fanout-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { generateJobName, generateQueueName } from '../__fixtures__/generate-literals';
+import { generatePayload } from '../__fixtures__/generate-pyaload';
 import { withRedisContainer } from '../__fixtures__/redis-fixture';
 
 describe.each([
   {
     publisher: BulkBullMqEventPublisher,
-    flowName: 'flow-1',
+    flowName: generateJobName(1),
   },
   {
     publisher: BulkBullMqEventPublisher,
@@ -29,7 +31,7 @@ describe.each([
   },
   {
     publisher: AtomicBullMqEventPublisher,
-    flowName: 'flow-1',
+    flowName: generateJobName(1),
   },
   {
     publisher: AtomicBullMqEventPublisher,
@@ -49,9 +51,6 @@ describe.each([
     synchronouslyConsumeByMultipleHandlers: vi.fn(),
   };
 
-  const QUEUE_1_NAME = 'main-queue';
-  const QUEUE_2_NAME = 'sub-queue';
-
   // Dedicated Redis instance per test.
   const getConnectionOptions = withRedisContainer();
 
@@ -60,14 +59,14 @@ describe.each([
     queueRegisterService = new QueueRegisterService();
     eventsRegisterService = new EventsRegisterService();
     flowRegisterService = new FlowRegisterService();
-    fanoutRouter = new FanoutRouter();
+    fanoutRouter = FanoutRouter.create();
     const CONNECTION: ConnectionOptions = {
       host: getConnectionOptions().host,
       port: getConnectionOptions().port,
     };
 
-    queueRegisterService.add(new Queue(QUEUE_1_NAME, { connection: CONNECTION }));
-    queueRegisterService.add(new Queue(QUEUE_2_NAME, { connection: CONNECTION }));
+    queueRegisterService.add(new Queue(generateQueueName(1), { connection: CONNECTION }));
+    queueRegisterService.add(new Queue(generateQueueName(2), { connection: CONNECTION }));
 
     if (flowName) {
       flowRegisterService.addNamed(flowName, new FlowProducer({ connection: CONNECTION }));
@@ -81,13 +80,13 @@ describe.each([
       eventsRegisterService,
       [
         {
-          queueName: QUEUE_1_NAME,
+          queueName: generateQueueName(1),
           workerOptions: {
             connection: CONNECTION,
           },
         },
         {
-          queueName: QUEUE_2_NAME,
+          queueName: generateQueueName(2),
           workerOptions: {
             connection: CONNECTION,
           },
@@ -118,10 +117,10 @@ describe.each([
 
   it.each([
     {
-      mainPayload: { test: 'test' },
-      subPayload: { test: 'sub' },
-      mainPayloadExpected: { test: 'test' },
-      subPayloadExpected: { test: 'sub' },
+      mainPayload: generatePayload(1),
+      subPayload: generatePayload(2),
+      mainPayloadExpected: generatePayload(1),
+      subPayloadExpected: generatePayload(2),
     },
     {
       mainPayload: undefined,
@@ -134,15 +133,15 @@ describe.each([
     async ({ mainPayload, subPayload, mainPayloadExpected, subPayloadExpected }) => {
       class TestSubEvent extends BullMqTask {
         constructor(payload: object) {
-          super({ queueName: QUEUE_2_NAME, name: 'test-sub-event', jobOptions: { attempts: 3 }, payload });
+          super({ queueName: generateQueueName(2), name: generateJobName(1), jobOptions: { attempts: 3 }, payload });
         }
       }
 
       class TestFlowEvent extends BullMqFlowTask {
         constructor(mainPayload: object, subPayload: object) {
           super({
-            queueName: QUEUE_1_NAME,
-            name: 'test-flow-event',
+            queueName: generateQueueName(1),
+            name: generateJobName(2),
             jobOptions: { attempts: 3 },
             payload: mainPayload,
             children: [new TestSubEvent(subPayload)],
@@ -165,25 +164,25 @@ describe.each([
 
       expect(calls.map((c) => c[0])).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ _name: 'test-sub-event', _payload: subPayloadExpected }),
-          expect.objectContaining({ _name: 'test-flow-event', _payload: mainPayloadExpected }),
+          expect.objectContaining({ _name: generateJobName(1), _payload: subPayloadExpected }),
+          expect.objectContaining({ _name: generateJobName(2), _payload: mainPayloadExpected }),
         ]),
       );
 
       const subCall = calls.find((c) => c[0] instanceof TestSubEvent);
       const mainCall = calls.find((c) => c[0] instanceof TestFlowEvent);
 
-      expect(subCall?.[1].context).toMatchObject({ queue: { name: QUEUE_2_NAME } });
-      expect(mainCall?.[1].context).toMatchObject({ queue: { name: QUEUE_1_NAME } });
+      expect(subCall?.[1].context).toMatchObject({ queue: { name: generateQueueName(2) } });
+      expect(mainCall?.[1].context).toMatchObject({ queue: { name: generateQueueName(1) } });
     },
   );
 
   it.each([
     {
-      mainPayload: { test: 'test' },
-      subPayload: { test: 'sub' },
-      mainPayloadExpected: { test: 'test' },
-      subPayloadExpected: { test: 'sub' },
+      mainPayload: generatePayload(1),
+      subPayload: generatePayload(2),
+      mainPayloadExpected: generatePayload(1),
+      subPayloadExpected: generatePayload(2),
     },
     {
       mainPayload: undefined,
@@ -197,8 +196,8 @@ describe.each([
       class TestSubFlowEvent extends BullMqFlowTask {
         constructor(payload: object) {
           super({
-            queueName: QUEUE_2_NAME,
-            name: 'test-sub-event',
+            queueName: generateQueueName(2),
+            name: generateJobName(1),
             jobOptions: { attempts: 3 },
             payload,
             flowName: flowName ?? undefined,
@@ -209,8 +208,8 @@ describe.each([
       class TestMainFlowEvent extends BullMqFlowTask {
         constructor(mainPayload: object, subPayload: object) {
           super({
-            queueName: QUEUE_1_NAME,
-            name: 'test-flow-event',
+            queueName: generateQueueName(1),
+            name: generateJobName(2),
             jobOptions: { attempts: 3 },
             payload: mainPayload,
             children: [new TestSubFlowEvent(subPayload)],
@@ -232,7 +231,7 @@ describe.each([
       expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0].payload).toEqual(subPayloadExpected);
       expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][0]).toBeInstanceOf(TestSubFlowEvent);
       expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[0][1].context).toMatchObject({
-        queue: { name: QUEUE_2_NAME },
+        queue: { name: generateQueueName(2) },
       });
 
       expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][0]).toBeInstanceOf(TestMainFlowEvent);
@@ -240,7 +239,7 @@ describe.each([
         mainPayloadExpected,
       );
       expect(eventBus.synchronouslyConsumeByStrictlySingleHandler.mock.calls[1][1].context).toMatchObject({
-        queue: { name: QUEUE_1_NAME },
+        queue: { name: generateQueueName(1) },
       });
     },
   );

@@ -13,7 +13,7 @@ export interface BullMqBaseTaskOptions<TPayload extends object = object> {
 export abstract class BullMqBaseTask<TPayload extends object = object> implements Task<TPayload> {
   protected readonly _name: string;
   protected readonly _jobOptions: Readonly<JobsOptions> | undefined;
-  protected readonly _payload: TPayload | null;
+  protected _payload: TPayload | null;
 
   constructor(options: BullMqBaseTaskOptions<TPayload>) {
     this._name = options.name;
@@ -42,5 +42,9 @@ export abstract class BullMqBaseTask<TPayload extends object = object> implement
 
   public _deserialize(data: object): TPayload {
     return data as TPayload;
+  }
+
+  public _setPayload(payload: TPayload | null): void {
+    this._payload = payload;
   }
 }
