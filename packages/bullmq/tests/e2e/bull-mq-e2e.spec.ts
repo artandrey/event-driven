@@ -14,6 +14,7 @@ import {
 } from 'packages/bullmq/lib';
 import { HandlesBullMq } from 'packages/bullmq/lib/util';
 
+import { createTask } from '../__fixtures__/create-task';
 import { withRedisContainer } from '../__fixtures__/redis-fixture';
 import { createTaskProcessor } from '../__fixtures__/task-processor';
 
@@ -78,23 +79,15 @@ describe.each([
     await Promise.all(queueRegisterService.getAll().map((q) => q.close()));
   });
 
-  it('should publish and process event', async () => {
+  it('should publish and process task', async () => {
     const result = 'completion-result';
 
-    class TestEvent extends BullMqTask {
-      constructor(payload: object) {
-        super({
-          name: JOB_NAME,
-          queueName: QUEUE_NAME,
-          payload,
-        });
-      }
-    }
+    const testTask = createTask(JOB_NAME, { test: 'test' }, QUEUE_NAME, {});
 
-    const { processor: TestHandler, handleSpy } = createTaskProcessor<object, any>();
+    const { processor: TestTaskProcessor, handleSpy } = createTaskProcessor<object, any>();
     handleSpy.mockResolvedValue(result);
 
-    handlerRegister.addHandler(HandlesBullMq(TestEvent), new TestHandler());
+    handlerRegister.addHandler(HandlesBullMq(testTask.class), new TestTaskProcessor());
     eventConsumer.init();
 
     const eventPublisher = new publisher(queueRegisterService, flowRegisterService, fanoutRouter);
@@ -103,12 +96,12 @@ describe.each([
     const jobCompletionSpy = vi.fn();
     workerRegisterService.get(QUEUE_NAME).on('completed', jobCompletionSpy);
 
-    eventBus.publish(new TestEvent({ test: 'test' }));
+    eventBus.publish(testTask.instance);
 
     await vi.waitFor(
       () => {
         expect(handleSpy).toHaveBeenCalledTimes(1);
-        expect(handleSpy.mock.calls[0][0]).toBeInstanceOf(TestEvent);
+        expect(handleSpy.mock.calls[0][0]).toBeInstanceOf(testTask.class);
         expect(handleSpy.mock.calls[0][0].payload).toEqual({ test: 'test' });
         expect(jobCompletionSpy).toHaveBeenCalledTimes(1);
         expect(jobCompletionSpy.mock.calls[0][1]).toEqual(result);

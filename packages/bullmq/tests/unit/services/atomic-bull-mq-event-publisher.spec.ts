@@ -5,9 +5,9 @@ import {
   QueueRegisterService,
 } from 'packages/bullmq/lib';
 
-import { createFanoutEvent, createFlowEvent, createJobEvent } from '../../__fixtures__/create-event';
 import { createFlowProducerMock } from '../../__fixtures__/create-flow-prducer-mock';
 import { createQueueMock } from '../../__fixtures__/create-queue-mock';
+import { createFanoutTask, createFlowTask, createTask } from '../../__fixtures__/create-task';
 import { randomBullMqJobOptions } from '../../__fixtures__/random-bull-mq-options';
 
 describe('AtomicBullMqEventPublisher', () => {
@@ -32,13 +32,13 @@ describe('AtomicBullMqEventPublisher', () => {
         instance: testEvent1,
         queueName: testEvent1QueueName,
         toQueueAddOptions: testEvent1ToQueueAddOptions,
-      } = createJobEvent('test-event-1', { test: 'test' }, 'queue-1', jobOptions);
+      } = createTask('test-event-1', { test: 'test' }, 'queue-1', jobOptions);
 
       const {
         instance: testEvent2,
         queueName: testEvent2QueueName,
         toQueueAddOptions: testEvent2ToQueueAddOptions,
-      } = createJobEvent('test-event-2', { test: 'test' }, 'queue-2', jobOptions);
+      } = createTask('test-event-2', { test: 'test' }, 'queue-2', jobOptions);
 
       queueRegisterService.get.mockImplementation((queueName) => {
         if (queueName === testEvent1QueueName) {
@@ -58,7 +58,7 @@ describe('AtomicBullMqEventPublisher', () => {
       const flowProducer = createFlowProducerMock();
       const jobOptions = randomBullMqJobOptions();
 
-      const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowTask(
         'test-flow-event-1',
         { test: 'test1' },
         'queue-1',
@@ -66,7 +66,7 @@ describe('AtomicBullMqEventPublisher', () => {
         [],
       );
 
-      const { instance: testEvent2, toFlowAddOptions: testEvent2ToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent2, toFlowAddOptions: testEvent2ToFlowAddOptions } = createFlowTask(
         'test-flow-event-2',
         { test: 'test2' },
         'queue-2',
@@ -87,7 +87,7 @@ describe('AtomicBullMqEventPublisher', () => {
       const flowProducer2 = createFlowProducerMock();
       const jobOptions = randomBullMqJobOptions();
 
-      const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowTask(
         'test-flow-event-1',
         { test: 'test1' },
         'queue-1',
@@ -96,7 +96,7 @@ describe('AtomicBullMqEventPublisher', () => {
         'flow-1',
       );
 
-      const { instance: testEvent2, toFlowAddOptions: testEvent2ToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent2, toFlowAddOptions: testEvent2ToFlowAddOptions } = createFlowTask(
         'test-flow-event-2',
         { test: 'test2' },
         'queue-2',
@@ -133,7 +133,7 @@ describe('AtomicBullMqEventPublisher', () => {
         instance: testEvent,
         class: TestEventClass,
         toFanoutAddOptions,
-      } = createFanoutEvent('test-fanout-event', { test: 'fanout-test' }, jobOptions);
+      } = createFanoutTask('test-fanout-event', { test: 'fanout-test' }, jobOptions);
 
       const [name, payload, options] = toFanoutAddOptions();
 
@@ -166,13 +166,13 @@ describe('AtomicBullMqEventPublisher', () => {
         instance: testEvent1,
         class: TestEventClass1,
         toFanoutAddOptions: toFanoutAddOptions1,
-      } = createFanoutEvent('test-fanout-event-1', { test: 'fanout-test-1' }, jobOptions);
+      } = createFanoutTask('test-fanout-event-1', { test: 'fanout-test-1' }, jobOptions);
 
       const {
         instance: testEvent2,
         class: TestEventClass2,
         toFanoutAddOptions: toFanoutAddOptions2,
-      } = createFanoutEvent('test-fanout-event-2', { test: 'fanout-test-2' }, jobOptions);
+      } = createFanoutTask('test-fanout-event-2', { test: 'fanout-test-2' }, jobOptions);
 
       const [name1, payload1, options1] = toFanoutAddOptions1();
       const [name2, payload2, options2] = toFanoutAddOptions2();
@@ -213,7 +213,7 @@ describe('AtomicBullMqEventPublisher', () => {
       const queue1CustomOptions = { attempts: 5, priority: 10 };
       const queue2CustomOptions = { attempts: 2, backoff: { type: 'fixed', delay: 5000 } };
 
-      const { instance: testEvent, class: TestEventClass } = createFanoutEvent(
+      const { instance: testEvent, class: TestEventClass } = createFanoutTask(
         'test-fanout-event',
         { test: 'fanout-test' },
         eventJobOptions,
@@ -246,7 +246,7 @@ describe('AtomicBullMqEventPublisher', () => {
       const queue1CustomOptions = { attempts: 5, priority: 10 };
       const queue2CustomOptions = { delay: 5000, backoff: { type: 'fixed', delay: 2000 } };
 
-      const { instance: testEvent, class: TestEventClass } = createFanoutEvent(
+      const { instance: testEvent, class: TestEventClass } = createFanoutTask(
         'test-fanout-event',
         { test: 'fanout-test' },
         eventJobOptions,

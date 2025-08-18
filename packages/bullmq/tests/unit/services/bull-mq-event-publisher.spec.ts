@@ -7,9 +7,9 @@ import {
   QueueRegisterService,
 } from 'packages/bullmq/lib';
 
-import { createFanoutEvent, createFlowEvent, createJobEvent } from '../../__fixtures__/create-event';
 import { createFlowProducerMock } from '../../__fixtures__/create-flow-prducer-mock';
 import { createQueueMock } from '../../__fixtures__/create-queue-mock';
+import { createFanoutTask, createFlowTask, createTask } from '../../__fixtures__/create-task';
 import { randomBullMqJobOptions } from '../../__fixtures__/random-bull-mq-options';
 
 describe.each([
@@ -48,7 +48,7 @@ describe.each([
     it('should publish queue event', () => {
       const jobOptions = randomBullMqJobOptions();
 
-      const { instance: testEvent, toQueueAddOptions: testEventToQueueAddOptions } = createJobEvent(
+      const { instance: testEvent, toQueueAddOptions: testEventToQueueAddOptions } = createTask(
         'test-event',
         { test: 'test' },
         'queue-1',
@@ -67,7 +67,7 @@ describe.each([
     it('should publish unnamed flow event', () => {
       const jobOptions = randomBullMqJobOptions();
 
-      const { instance: testEvent, toFlowAddOptions: testEventToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent, toFlowAddOptions: testEventToFlowAddOptions } = createFlowTask(
         'test-event',
         { test: 'test' },
         'queue-1',
@@ -87,7 +87,7 @@ describe.each([
     it('should publish named flow event', () => {
       const jobOptions = randomBullMqJobOptions();
 
-      const { instance: testEvent, toFlowAddOptions: testEventToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent, toFlowAddOptions: testEventToFlowAddOptions } = createFlowTask(
         'test-event',
         { test: 'test' },
         'queue-1',
@@ -117,7 +117,7 @@ describe.each([
         instance: testEvent,
         class: TestEventClass,
         toFanoutAddOptions,
-      } = createFanoutEvent('test-fanout-event', { test: 'fanout-test' }, jobOptions);
+      } = createFanoutTask('test-fanout-event', { test: 'fanout-test' }, jobOptions);
 
       const [name, payload, options] = toFanoutAddOptions();
 
@@ -147,7 +147,7 @@ describe.each([
       const queue1CustomOptions = { attempts: 5, priority: 10 };
       const queue2CustomOptions = { attempts: 2, backoff: { type: 'fixed', delay: 5000 } };
 
-      const { instance: testEvent, class: TestEventClass } = createFanoutEvent(
+      const { instance: testEvent, class: TestEventClass } = createFanoutTask(
         'test-fanout-event',
         { test: 'fanout-test' },
         eventJobOptions,
@@ -180,7 +180,7 @@ describe.each([
       const queue1CustomOptions = { attempts: 5, priority: 10 };
       const queue2CustomOptions = { delay: 5000, backoff: { type: 'fixed', delay: 2000 } };
 
-      const { instance: testEvent, class: TestEventClass } = createFanoutEvent(
+      const { instance: testEvent, class: TestEventClass } = createFanoutTask(
         'test-fanout-event',
         { test: 'fanout-test' },
         eventJobOptions,

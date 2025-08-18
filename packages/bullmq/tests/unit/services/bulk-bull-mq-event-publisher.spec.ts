@@ -1,8 +1,8 @@
 import { BulkBullMqEventPublisher, FanoutRouter, FlowRegisterService, QueueRegisterService } from 'packages/bullmq/lib';
 
-import { createFanoutEvent, createFlowEvent, createJobEvent } from '../../__fixtures__/create-event';
 import { createFlowProducerMock } from '../../__fixtures__/create-flow-prducer-mock';
 import { createQueueMock } from '../../__fixtures__/create-queue-mock';
+import { createFanoutTask, createFlowTask, createTask } from '../../__fixtures__/create-task';
 import { randomBullMqJobOptions } from '../../__fixtures__/random-bull-mq-options';
 
 describe('BulkBullMqEventPublisher', () => {
@@ -27,13 +27,13 @@ describe('BulkBullMqEventPublisher', () => {
         instance: testEvent1,
         queueName: testEvent1QueueName,
         toQueueAddBulkOptionsItem: testEvent1ToQueueAddBulkOptionsItem,
-      } = createJobEvent('test-event-1', { test: 'test' }, 'queue-1', jobOptions);
+      } = createTask('test-event-1', { test: 'test' }, 'queue-1', jobOptions);
 
       const {
         instance: testEvent2,
         queueName: testEvent2QueueName,
         toQueueAddBulkOptionsItem: testEvent2ToQueueAddBulkOptionsItem,
-      } = createJobEvent('test-event-2', { test: 'test' }, 'queue-2', jobOptions);
+      } = createTask('test-event-2', { test: 'test' }, 'queue-2', jobOptions);
 
       queueRegisterService.get.mockImplementation((queueName) => {
         if (queueName === testEvent1QueueName) {
@@ -53,14 +53,14 @@ describe('BulkBullMqEventPublisher', () => {
       const queueMock = createQueueMock();
       const jobOptions = randomBullMqJobOptions();
 
-      const { instance: testEvent1, toQueueAddBulkOptionsItem: testEvent1ToQueueAddBulkOptionsItem } = createJobEvent(
+      const { instance: testEvent1, toQueueAddBulkOptionsItem: testEvent1ToQueueAddBulkOptionsItem } = createTask(
         'test-event-1',
         { test: 'test1' },
         'queue-1',
         jobOptions,
       );
 
-      const { instance: testEvent2, toQueueAddBulkOptionsItem: testEvent2ToQueueAddBulkOptionsItem } = createJobEvent(
+      const { instance: testEvent2, toQueueAddBulkOptionsItem: testEvent2ToQueueAddBulkOptionsItem } = createTask(
         'test-event-2',
         { test: 'test2' },
         'queue-1',
@@ -82,7 +82,7 @@ describe('BulkBullMqEventPublisher', () => {
       const flowProducer = createFlowProducerMock();
       const jobOptions = randomBullMqJobOptions();
 
-      const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowTask(
         'test-flow-event-1',
         { test: 'test1' },
         'queue-1',
@@ -90,7 +90,7 @@ describe('BulkBullMqEventPublisher', () => {
         [],
       );
 
-      const { instance: testEvent2, toFlowAddOptions: testEvent2ToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent2, toFlowAddOptions: testEvent2ToFlowAddOptions } = createFlowTask(
         'test-flow-event-2',
         { test: 'test2' },
         'queue-2',
@@ -111,7 +111,7 @@ describe('BulkBullMqEventPublisher', () => {
       const flowProducer2 = createFlowProducerMock();
       const jobOptions = randomBullMqJobOptions();
 
-      const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowTask(
         'test-flow-event-1',
         { test: 'test1' },
         'queue-1',
@@ -120,7 +120,7 @@ describe('BulkBullMqEventPublisher', () => {
         'flow-1',
       );
 
-      const { instance: testEvent2, toFlowAddOptions: testEvent2ToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent2, toFlowAddOptions: testEvent2ToFlowAddOptions } = createFlowTask(
         'test-flow-event-2',
         { test: 'test2' },
         'queue-2',
@@ -149,7 +149,7 @@ describe('BulkBullMqEventPublisher', () => {
       const flowProducer = createFlowProducerMock();
       const jobOptions = randomBullMqJobOptions();
 
-      const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent1, toFlowAddOptions: testEvent1ToFlowAddOptions } = createFlowTask(
         'test-flow-event-1',
         { test: 'test1' },
         'queue-1',
@@ -158,7 +158,7 @@ describe('BulkBullMqEventPublisher', () => {
         'flow-1',
       );
 
-      const { instance: testEvent2, toFlowAddOptions: testEvent2ToFlowAddOptions } = createFlowEvent(
+      const { instance: testEvent2, toFlowAddOptions: testEvent2ToFlowAddOptions } = createFlowTask(
         'test-flow-event-2',
         { test: 'test2' },
         'queue-2',
@@ -188,7 +188,7 @@ describe('BulkBullMqEventPublisher', () => {
         name: name1,
         payload: payload1,
         jobOptions: options1,
-      } = createFanoutEvent('test-fanout-event-1', { test: 'fanout-test-1' }, jobOptions);
+      } = createFanoutTask('test-fanout-event-1', { test: 'fanout-test-1' }, jobOptions);
 
       const {
         instance: testEvent2,
@@ -196,7 +196,7 @@ describe('BulkBullMqEventPublisher', () => {
         name: name2,
         payload: payload2,
         jobOptions: options2,
-      } = createFanoutEvent('test-fanout-event-2', { test: 'fanout-test-2' }, jobOptions);
+      } = createFanoutTask('test-fanout-event-2', { test: 'fanout-test-2' }, jobOptions);
 
       fanoutRouter.getRoute.mockImplementation((eventClass) => {
         if (eventClass === TestEventClass1) {
@@ -230,14 +230,14 @@ describe('BulkBullMqEventPublisher', () => {
       const flowProducer = createFlowProducerMock();
       const jobOptions = randomBullMqJobOptions();
 
-      const { instance: queueEvent, toQueueAddBulkOptionsItem: queueEventToQueueAddBulkOptionsItem } = createJobEvent(
+      const { instance: queueEvent, toQueueAddBulkOptionsItem: queueEventToQueueAddBulkOptionsItem } = createTask(
         'queue-event',
         { test: 'queue' },
         'queue-1',
         jobOptions,
       );
 
-      const { instance: flowEvent, toFlowAddOptions: flowEventToFlowAddOptions } = createFlowEvent(
+      const { instance: flowEvent, toFlowAddOptions: flowEventToFlowAddOptions } = createFlowTask(
         'flow-event',
         { test: 'flow' },
         'queue-1',
@@ -251,7 +251,7 @@ describe('BulkBullMqEventPublisher', () => {
         name: fanoutName,
         payload: fanoutPayload,
         jobOptions: fanoutOptions,
-      } = createFanoutEvent('fanout-event', { test: 'fanout' }, jobOptions);
+      } = createFanoutTask('fanout-event', { test: 'fanout' }, jobOptions);
 
       fanoutRouter.getRoute.mockImplementation((eventClass) => {
         if (eventClass === FanoutEventClass) {
@@ -290,7 +290,7 @@ describe('BulkBullMqEventPublisher', () => {
         class: TestEventClass,
         name,
         payload,
-      } = createFanoutEvent('test-fanout-event', { test: 'fanout-test' }, eventJobOptions);
+      } = createFanoutTask('test-fanout-event', { test: 'fanout-test' }, eventJobOptions);
 
       fanoutRouter.getRoute.mockReturnValue({
         queues: [
@@ -324,7 +324,7 @@ describe('BulkBullMqEventPublisher', () => {
         class: TestEventClass,
         name,
         payload,
-      } = createFanoutEvent('test-fanout-event', { test: 'fanout-test' }, eventJobOptions);
+      } = createFanoutTask('test-fanout-event', { test: 'fanout-test' }, eventJobOptions);
 
       fanoutRouter.getRoute.mockReturnValue({
         queues: [
