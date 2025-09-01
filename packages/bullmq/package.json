@@ -23,7 +23,7 @@
     "@event-driven-architecture/core": "*",
     "@testcontainers/redis": "^11.4.0",
     "bullmq": "^5.58.4",
-    "testcontainers": "^11.4.0"
+    "testcontainers": "^11.5.1"
   },
   "peerDependencies": {
     "@event-driven-architecture/core": "^1.0.0",
