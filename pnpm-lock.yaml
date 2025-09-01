@@ -87,8 +87,8 @@ importers:
         specifier: '*'
         version: 1.0.0
       '@testcontainers/redis':
-        specifier: ^11.4.0
-        version: 11.4.0
+        specifier: ^11.5.1
+        version: 11.5.1
       bullmq:
         specifier: ^5.58.4
         version: 5.58.4
@@ -1479,8 +1479,8 @@ packages:
   '@sinclair/typebox@0.34.41':
     resolution: {integrity: sha512-6gS8pZzSXdyRHTIqoqSVknxolr1kzfy4/CeDnrzsVz8TTIWUbOBr6gnzOmTYJ3eXQNh4IYHIGi5aIL7sOZ2G/g==}
 
-  '@testcontainers/redis@11.4.0':
-    resolution: {integrity: sha512-w+2VpYt5xAEYbsdhITgwDMif+5Atae+q0ifG/ZrSUZXK528CzqsfnxIgwrZWFnLDCqk1mVNgG4mXdD8VDGd38w==}
+  '@testcontainers/redis@11.5.1':
+    resolution: {integrity: sha512-ThGaUPUCFW4Vwmx6kfPYhhTQjq/3UXJQrU/xxiYLqgvFJNtvtYlWmzXrwORLhPkkqnoFUnfFaX3u9u1GnrlDkw==}
 
   '@tokenizer/inflate@0.2.7':
     resolution: {integrity: sha512-MADQgmZT1eKjp06jpI2yozxaU9uVs4GzzgSL+uEq7bVcJ9V1ZXQkeGNql1fsSI0gMy1vhvNTNbUqrx+pZfJVmg==}
@@ -5801,7 +5801,7 @@ snapshots:
 
   '@sinclair/typebox@0.34.41': {}
 
-  '@testcontainers/redis@11.4.0':
+  '@testcontainers/redis@11.5.1':
     dependencies:
       testcontainers: 11.5.1
     transitivePeerDependencies:
