@@ -21,7 +21,7 @@
   "types": "dist/index.d.ts",
   "devDependencies": {
     "@event-driven-architecture/core": "*",
-    "@testcontainers/redis": "^11.4.0",
+    "@testcontainers/redis": "^11.5.1",
     "bullmq": "^5.58.4",
     "testcontainers": "^11.5.1"
   },
