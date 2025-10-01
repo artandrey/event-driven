@@ -37,7 +37,7 @@
     "@nestjs/common": "^11.1.6",
     "@nestjs/core": "^11.1.6",
     "@nestjs/testing": "^11.1.6",
-    "@nx/js": "^21.4.1",
+    "@nx/js": "^21.6.2",
     "@nx/rollup": "21.6.2",
     "@nx/vite": "^21.4.1",
     "@nx/web": "21.4.1",
