@@ -38,7 +38,7 @@
     "@nestjs/core": "^11.1.6",
     "@nestjs/testing": "^11.1.6",
     "@nx/js": "^21.4.1",
-    "@nx/rollup": "21.3.11",
+    "@nx/rollup": "21.6.2",
     "@nx/vite": "^21.4.1",
     "@nx/web": "21.4.1",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
