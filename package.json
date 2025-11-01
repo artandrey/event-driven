@@ -52,7 +52,7 @@
     "nx": "21.6.2",
     "prettier": "^3.6.2",
     "tsc-files": "^1.1.4",
-    "typescript": "^5.8.3",
+    "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
     "vite": "^6.0.0",
     "vitest": "^3.2.4"
