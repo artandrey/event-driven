@@ -22,7 +22,7 @@
   "devDependencies": {
     "@event-driven-architecture/core": "*",
     "@testcontainers/redis": "^11.7.2",
-    "bullmq": "^5.58.4",
+    "bullmq": "^5.66.4",
     "testcontainers": "^11.9.0"
   },
   "peerDependencies": {
